@@ -1,0 +1,68 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Additional custom styles */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb transparent;
+}
+
+/* For Chrome, Safari, and Opera */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #e5e7eb;
+  border-radius: 20px;
+  border: transparent;
+}
+
+
+
+.toggle-checkbox:checked {
+  right: 0;
+  border-color: #fff;
+}
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #3b82f6;
+}
+.toggle-checkbox {
+  right: 0;
+  z-index: 1;
+  border-color: #e2e8f0;
+  transition: all 0.3s;
+}
+.toggle-label {
+  transition: background-color 0.3s;
+}
