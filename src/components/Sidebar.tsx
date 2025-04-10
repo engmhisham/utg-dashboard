@@ -179,15 +179,15 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
         </nav>
 
         <div className="mt-auto border-t border-gray-200 pt-4 pb-2 px-4 absolute bottom-0 w-56">
-          <div className="flex items-center gap-2 py-2 px-2 rounded-xl border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer">
+          {/* <div className="flex items-center gap-2 py-2 px-2 rounded-xl border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer">
             <HelpCircle size={16} className="text-gray-500" />
             <span className="text-sm">Help center</span>
-          </div>
-          <div className="flex items-center gap-2 py-2 px-2 rounded-xl border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer">
+          </div> */}
+          {/* <div className="flex items-center gap-2 py-2 px-2 rounded-xl border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer">
             <Bell size={16} className="text-gray-500" />
             <span className="text-sm">Notifications</span>
             <span className="ml-auto bg-red-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">3</span>
-          </div>
+          </div> */}
           <div className="flex items-center gap-2 py-2 px-2 rounded-xl border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer mt-2">
             <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center text-xs">EC</div>
             <span className="text-sm">Ember Crest</span>
