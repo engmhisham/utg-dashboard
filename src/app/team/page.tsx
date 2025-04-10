@@ -123,7 +123,7 @@ export default function TeamPage() {
       
       <main className="flex-1 overflow-y-auto">
         {/* Full‑width Sticky Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+        <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
           <div className="p-4 md:p-6">
             {isMobile ? (
               <div className="flex items-center justify-between">
