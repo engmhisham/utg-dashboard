@@ -376,7 +376,7 @@ export default function FAQsPage() {
                   </div>
                   
                   {expandedFAQ === faq.id && (
-                    <div className="p-4 pt-0 border-t border-gray-100 animate-fade-in">
+                    <div className="p-4 pt-0 animate-fade-in">
                       <p className="text-gray-600">{faq.answer}</p>
                       
                       {/* Mobile action buttons - only shown in expanded view on mobile */}
