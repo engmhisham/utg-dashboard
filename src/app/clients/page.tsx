@@ -12,7 +12,9 @@ import {
   PencilLine,
   MoreHorizontal,
   Image as ImageIcon,
-  UsersRound
+  UsersRound,
+  Menu,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -69,23 +71,21 @@ export default function ClientsPage() {
   const router = useRouter();
   const pathname = usePathname();
   
-  // State for search, filtering, and mobile view detection
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [isMobile, setIsMobile] = useState(false);
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
   
-  // Check if mobile using window width
+  // For mobile sidebar (if you want to add the toggle button later)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
   useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
     checkIfMobile();
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
   
-  // Toggle selection for a specific client
   const toggleClientSelection = (id: string) => {
     if (selectedClients.includes(id)) {
       setSelectedClients(selectedClients.filter(clientId => clientId !== id));
@@ -94,7 +94,6 @@ export default function ClientsPage() {
     }
   };
   
-  // Toggle select/unselect all clients
   const toggleSelectAll = () => {
     if (selectedClients.length === filteredClients.length) {
       setSelectedClients([]);
@@ -103,12 +102,10 @@ export default function ClientsPage() {
     }
   };
   
-  // Handle edit action
   const handleEditClient = (id: string) => {
     router.push(`/clients/edit/${id}`);
   };
   
-  // Filter clients based on search query and status filter
   const filteredClients = sampleClients.filter(client => {
     const matchesSearch = 
       client.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -122,31 +119,61 @@ export default function ClientsPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
-      {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="p-4 md:p-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <div className="flex items-center">
-              <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
-                <ArrowLeft size={20} />
-              </Link>
-              <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-              <UsersRound size={22} className="mr-2" />
-                Clients</h1>
-            </div>
-            <button 
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          <div className="p-4 md:p-6">
+            {isMobile ? (
+              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                  aria-label="Toggle sidebar"
+                >
+                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+                <Link href="/" className="text-gray-500 hover:text-gray-700">
+                  <ArrowLeft size={20} />
+                </Link>
+                <h1 className="text-xl font-medium ml-2 flex items-center">
+                <UsersRound size={22} className="mr-2" />
+                  Clients</h1>
+              </div>
+              <button 
               onClick={() => router.push('/clients/create')}
-              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
+              className="flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <Plus size={18} className="mr-2" />
-              Add Client
+              <Plus size={18} />
             </button>
           </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl md:text-2xl font-semibold flex items-center">
+                    <UsersRound size={22} className="mr-2" />
+                    Clients
+                  </h1>
+                </div>
+                <button 
+                  onClick={() => router.push('/clients/create')}
+                  className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <Plus size={18} className="mr-2" />
+                  Add Client
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
+        {/* Content Container */}
+        <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
           {/* Filters */}
           <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-gray-200">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -163,11 +190,11 @@ export default function ClientsPage() {
               
               <div className="flex items-center gap-2 w-full md:w-auto">
                 <span className="text-sm font-medium text-gray-600">Status:</span>
-                <div className="relative flex-1 md:flex-initial">
+                <div className="relative">
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="pl-3 pr-8 py-2 w-full border border-gray-300 rounded-lg bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="pl-3 pr-8 py-2 w-full border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="all">All</option>
                     <option value="active">Active</option>
@@ -179,7 +206,7 @@ export default function ClientsPage() {
             </div>
           </div>
 
-          {/* Clients list - Desktop View */}
+          {/* Clients List – Desktop View */}
           <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -268,9 +295,7 @@ export default function ClientsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(client.date).toLocaleDateString('en-US', {
-                          year: 'numeric', 
-                          month: 'short', 
-                          day: 'numeric'
+                          year: 'numeric', month: 'short', day: 'numeric'
                         })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -299,12 +324,12 @@ export default function ClientsPage() {
             </div>
           </div>
 
-          {/* Clients list - Mobile View */}
+          {/* Clients List – Mobile View */}
           <div className="md:hidden space-y-4">
             {filteredClients.map((client) => (
               <div 
                 key={client.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden cursor-pointer"
                 onClick={() => handleEditClient(client.id)}
               >
                 <div className="p-4">
@@ -329,17 +354,14 @@ export default function ClientsPage() {
                       {client.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  
                   <div className="text-sm text-gray-700 mb-3 line-clamp-2">
                     {client.description}
                   </div>
-                  
                   <div className="text-sm text-blue-600 mb-3">
                     <a href={client.url} target="_blank" rel="noopener noreferrer">
                       {client.url}
                     </a>
                   </div>
-                  
                   <div className="flex justify-between items-center pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center">
                       <input
@@ -353,7 +375,6 @@ export default function ClientsPage() {
                       />
                       <span className="text-xs text-gray-500">Select</span>
                     </div>
-                    
                     <div className="flex space-x-3">
                       <button 
                         className="text-indigo-600 hover:text-indigo-900"

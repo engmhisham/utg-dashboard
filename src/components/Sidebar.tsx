@@ -1,39 +1,33 @@
 // components/Sidebar.tsx
 'use client';
-import { FC, useState, useEffect, useRef } from 'react';
+import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
 import NavItem from './nav/NavItem';
 import SubNavItem from './nav/SubNavItem';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { 
-  Search, FileText, Users, BookCopy, HelpCircle, Bell, UsersRound, Mails, MessageCircleQuestion, Chrome, LayoutDashboard, Box, Menu, X,
+  Search, FileText, Users, BookCopy, HelpCircle, Bell, UsersRound, Mails, MessageCircleQuestion, Chrome, LayoutDashboard, Box, X,
   UserRoundCog,
   BookUser
 } from 'lucide-react';
 
-const Sidebar: FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
+interface SidebarProps {
+  isOpen: boolean;
+  toggleSidebar: () => void;
+}
+
+const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const pathname = usePathname();
 
-  // Function to handle window resize and set mobile state
+  // Handle window resize to determine if mobile
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth >= 768) {
-        setIsOpen(false); // Reset sidebar state when on desktop
-      }
     };
-
-    // Set initial state
     handleResize();
-
-    // Add event listener
     window.addEventListener('resize', handleResize);
-
-    // Clean up
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -44,40 +38,29 @@ const Sidebar: FC = () => {
     }
   }, [pathname]);
 
-  // Toggle sidebar
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
-
-  // Toggle submenu
   const toggleSubmenu = (menu: string) => {
     setActiveSubmenu(activeSubmenu === menu ? null : menu);
   };
 
-  // Check if path is active
-  const isPathActive = (path: string) => {
-    return pathname === path;
-  };
+  const isPathActive = (path: string) => pathname === path;
 
   return (
     <>
-      {/* Mobile Toggle Button */}
-      {isMobile && (
-        <button 
-          onClick={toggleSidebar} 
-          className="fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md border border-gray-200"
-          aria-label="Toggle sidebar"
-        >
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      )}
-
-      {/* Sidebar */}
       <aside 
         className={`w-56 bg-gray-100 border-r border-gray-300 ${
           isMobile ? 'fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out' : 'hidden md:block'
         } ${isMobile && !isOpen ? '-translate-x-full' : 'translate-x-0'}`}
       >
+        {/* Close button for mobile view (inside the sidebar) */}
+        {/* {isMobile && (
+          <button 
+            onClick={toggleSidebar} 
+            className="absolute top-4 right-4 p-2 bg-white rounded-lg shadow-md border border-gray-200"
+            aria-label="Close sidebar"
+          >
+            <X size={24} />
+          </button>
+        )} */}
         <div className="w-[220px] border-r flex flex-col">
           <div className="p-4 border-b flex items-center">
             <div className="font-bold text-xl flex items-center">
@@ -98,7 +81,6 @@ const Sidebar: FC = () => {
               className="w-full bg-gray-100 border-2 border-gray-300 rounded-xl px-8 py-2 text-sm"
             />
             <Search size={14} className="absolute left-2.5 top-2.5 text-gray-500" />
-            {/* <div className="absolute right-2.5 top-2 text-xs text-gray-500 bg-white px-1 border border-gray-300 rounded">⌘F</div> */}
           </div>
         </div>
 
@@ -111,7 +93,6 @@ const Sidebar: FC = () => {
               active={isPathActive('/')}
               href="/"
             />
-            
             {/* SEO with submenu */}
             <div>
               <NavItem 
@@ -122,8 +103,6 @@ const Sidebar: FC = () => {
                 isActive={activeSubmenu === 'seo' || pathname?.includes('/seo')}
                 onClick={() => toggleSubmenu('seo')}
               />
-              
-              {/* Integrated submenu items */}
               {activeSubmenu === 'seo' && (
                 <div className="ml-2 mt-1">
                   <SubNavItem 
@@ -216,7 +195,7 @@ const Sidebar: FC = () => {
         </div>
       </aside>
 
-      {/* Overlay for mobile when sidebar is open */}
+      {/* Optional overlay for mobile */}
       {isMobile && isOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-30"

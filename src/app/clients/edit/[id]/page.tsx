@@ -1,18 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../../../components/Sidebar';
 import { usePathname, useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  Check,
-  X,
-  Upload,
-  Image as ImageIcon,
-  ChevronDown,
-  RefreshCw,
-  Trash,
-  UsersRound
-} from 'lucide-react';
+import { ArrowLeft, Check, X, Upload, Image as ImageIcon, ChevronDown, RefreshCw, Trash, UsersRound, Menu } from 'lucide-react';
 import Link from 'next/link';
 
 // Sample clients data (for demonstration purposes)
@@ -63,7 +53,7 @@ export default function ClientEditPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const pathname = usePathname();
   
-  // Find the client by id or fallback to first
+  // Find the client by id or fallback to the first one
   const client = sampleClients.find(c => c.id === params.id) || sampleClients[0];
   
   // Form state for client details
@@ -93,40 +83,74 @@ export default function ClientEditPage({ params }: { params: { id: string } }) {
     router.push('/clients');
   };
 
+  // For mobile view and sidebar toggle
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
-      {/* Main Content */}
       <main className="flex-1 overflow-y-auto relative">
-        <div className="p-4 md:p-6 pb-24 md:pb-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <div className="flex items-center">
-              <Link href="/clients" className="text-gray-500 hover:text-gray-700 mr-2">
-                <ArrowLeft size={20} />
-              </Link>
-              <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-              <UsersRound size={22} className="mr-2" />
-                Editing Client</h1>
-            </div>
-            <div className="flex space-x-3 w-full sm:w-auto">
-              <button
-                onClick={handleCancel}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 flex-1 sm:flex-initial"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 flex-1 sm:flex-initial"
-              >
-                Save
-              </button>
-            </div>
+        {/* Sticky Header (full width, no horizontal padding) */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          <div className="p-4 md:p-6">
+            {isMobile ? (
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                  aria-label="Toggle sidebar"
+                >
+                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+                <Link href="/clients" className="text-gray-500 hover:text-gray-700">
+                  <ArrowLeft size={20} />
+                </Link>
+                <h1 className="text-xl font-medium ml-2 flex items-center">
+                <UsersRound size={22} className="mr-2" />
+                  Editing Client</h1>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Link href="/clients" className="text-gray-500 hover:text-gray-700 mr-2">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl md:text-2xl font-semibold flex items-center">
+                    <UsersRound size={22} className="mr-2" />
+                    Editing Client
+                  </h1>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleCancel}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          
+        </div>
+        
+        {/* Main Content Container */}
+        <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
           <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
             {/* Status Section */}
             <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
@@ -287,7 +311,6 @@ export default function ClientEditPage({ params }: { params: { id: string } }) {
                   className="flex items-center justify-center px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 w-full"
                   onClick={() => {
                     if (confirm('Are you sure you want to delete this client?')) {
-                      // Delete logic goes here
                       router.push('/clients');
                     }
                   }}
@@ -300,7 +323,7 @@ export default function ClientEditPage({ params }: { params: { id: string } }) {
 
             {/* Mobile Submit Buttons */}
             <div className="md:hidden">
-              <div className="fixed p-4 bg-white border-t border-gray-200 bottom-0 ml-0 w-full" style={{ left: 0, width: 'inherit', right: 0 }}>
+              <div className="fixed p-4 bg-white border-t border-gray-200 bottom-0 left-0 w-full">
                 <div className="flex space-x-3">
                   <button
                     type="button"

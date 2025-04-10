@@ -7,8 +7,9 @@ import {
   Search, 
   Trash2, 
   PencilLine, 
-  MoreHorizontal, 
-  BookUser
+  BookUser,
+  Menu,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -51,6 +52,7 @@ export default function ContactPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMessages, setSelectedMessages] = useState<string[]>([]);
   const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Determine mobile vs desktop view
   useEffect(() => {
@@ -106,22 +108,45 @@ export default function ContactPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar />
-      
+      {/* Sidebar passed with control props */}
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+
       <main className="flex-1 overflow-y-auto">
-        <div className="p-4 md:p-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <div className="flex items-center">
-              <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
+        {/* Sticky header without inline horizontal padding */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          {isMobile ? (
+            <div className="flex items-center gap-2 p-3">
+              <button 
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                aria-label="Toggle sidebar"
+              >
+                {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+              <Link href="/" className="p-1">
                 <ArrowLeft size={20} />
               </Link>
-              <h1 className="text-xl md:text-2xl font-semibold flex items-center">
+              <h1 className="text-xl font-medium flex items-center">
               <BookUser size={22} className="mr-2" />
-                Contact Messages</h1>
+                Contact</h1>
             </div>
-          </div>
-          
+          ) : (
+            <div className="flex items-center justify-between p-3">
+              <div className="flex items-center gap-2">
+                <Link href="/" className="text-gray-500 hover:text-gray-700 p-1">
+                  <ArrowLeft size={20} />
+                </Link>
+                <h1 className="text-xl md:text-2xl font-semibold flex items-center">
+                  <BookUser size={22} className="mr-2" />
+                  Contact Messages
+                </h1>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Page content container with margins */}
+        <div className="mx-auto max-w-7xl px-4">
           {/* Search Filter */}
           <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-gray-200">
             <div className="relative w-full md:w-1/3">
@@ -137,7 +162,7 @@ export default function ContactPage() {
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -220,18 +245,6 @@ export default function ContactPage() {
                           >
                             <Trash2 size={16} />
                           </button>
-                          {/* <button 
-                            className="text-gray-400 hover:text-gray-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(message.id);
-                            }}
-                          >
-                            <PencilLine size={16} />
-                          </button>
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <MoreHorizontal size={16} />
-                          </button> */}
                         </div>
                       </td>
                     </tr>
@@ -270,7 +283,9 @@ export default function ContactPage() {
                     </div>
                   </div>
                   <div className="text-sm text-blue-600 mb-2">{message.email}</div>
-                  <div className="text-sm text-gray-700 mb-2"><strong>Subject:</strong> {message.subject}</div>
+                  <div className="text-sm text-gray-700 mb-2">
+                    <strong>Subject:</strong> {message.subject}
+                  </div>
                   <div className="text-sm text-gray-700 line-clamp-2">{message.message}</div>
                   <div className="mt-3 flex justify-end space-x-2">
                     <button 
@@ -323,7 +338,6 @@ export default function ContactPage() {
               </div>
             </div>
           )}
-          
         </div>
       </main>
     </div>

@@ -12,7 +12,9 @@ import {
   PencilLine,
   MoreHorizontal,
   Image as ImageIcon,
-  UsersRound
+  UsersRound,
+  Menu,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -64,23 +66,23 @@ export default function TeamPage() {
   const router = useRouter();
   const pathname = usePathname();
   
-  // State for filtering and search
+  // State for search and filtering
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [isMobile, setIsMobile] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   
-  // Check if mobile on client side
+  // State for mobile detection and sidebar control
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
   useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
     checkIfMobile();
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
   
-  // Toggle team member selection
+  // Toggle selection for a member
   const toggleMemberSelection = (id: string) => {
     if (selectedMembers.includes(id)) {
       setSelectedMembers(selectedMembers.filter(memberId => memberId !== id));
@@ -89,7 +91,7 @@ export default function TeamPage() {
     }
   };
   
-  // Select all team members
+  // Select/deselect all filtered members
   const toggleSelectAll = () => {
     if (selectedMembers.length === filteredMembers.length) {
       setSelectedMembers([]);
@@ -98,18 +100,18 @@ export default function TeamPage() {
     }
   };
   
-  // Handle edit action
+  // Navigate to edit page
   const handleEditMember = (id: string) => {
     router.push(`/team/edit/${id}`);
   };
   
-  // Filter team members based on search and status
+  // Filter team members
   const filteredMembers = sampleTeamMembers.filter(member => {
     const matchesSearch = 
       member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = 
-      statusFilter === 'all' || 
+      statusFilter === 'all' ||
       (statusFilter === 'active' && member.status === 'active') ||
       (statusFilter === 'inactive' && member.status === 'inactive');
     return matchesSearch && matchesStatus;
@@ -117,31 +119,61 @@ export default function TeamPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
       
-      {/* Main content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="p-4 md:p-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <div className="flex items-center">
-              <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
-                <ArrowLeft size={20} />
-              </Link>
-              <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-              <UsersRound size={22} className="mr-2" />
-                Team</h1>
-            </div>
-            <button 
+        {/* Full‑width Sticky Header */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          <div className="p-4 md:p-6">
+            {isMobile ? (
+              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                  aria-label="Toggle sidebar"
+                >
+                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+                <Link href="/team" className="text-gray-500 hover:text-gray-700">
+                  <ArrowLeft size={20} />
+                </Link>
+                <h1 className="text-xl font-medium ml-2 flex items-center">
+                <UsersRound size={22} className="mr-2" />
+                  Team</h1>
+              </div>
+              <button 
               onClick={() => router.push('/team/create')}
-              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
+              className="flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <Plus size={18} className="mr-2" />
-              Add Team Member
+              <Plus size={18} />
             </button>
           </div>
-
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Link href="/team" className="text-gray-500 hover:text-gray-700 mr-2">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl md:text-2xl font-semibold flex items-center">
+                    <UsersRound size={22} className="mr-2" />
+                    Team
+                  </h1>
+                </div>
+                <button 
+                  onClick={() => router.push('/team/create')}
+                  className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <Plus size={18} className="mr-2"/>
+                  Add Team Member
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Main Content Container */}
+        <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
           {/* Filters */}
           <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-gray-200">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -162,7 +194,7 @@ export default function TeamPage() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="pl-3 pr-8 py-2 w-full border border-gray-300 rounded-lg bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="pl-3 pr-8 py-2 w-full border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="all">All</option>
                     <option value="active">Active</option>
@@ -173,8 +205,8 @@ export default function TeamPage() {
               </div>
             </div>
           </div>
-
-          {/* Team list - Desktop view */}
+          
+          {/* Team List – Desktop View */}
           <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -208,7 +240,7 @@ export default function TeamPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredMembers.map((member) => (
+                  {filteredMembers.map(member => (
                     <tr 
                       key={member.id} 
                       className="hover:bg-gray-50 cursor-pointer"
@@ -246,19 +278,13 @@ export default function TeamPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          member.status === 'active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-800'
+                          member.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                         }`}>
                           {member.status === 'active' ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(member.date).toLocaleDateString('en-US', {
-                          year: 'numeric', 
-                          month: 'short', 
-                          day: 'numeric'
-                        })}
+                        {new Date(member.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end items-center space-x-2" onClick={(e) => e.stopPropagation()}>
@@ -285,13 +311,13 @@ export default function TeamPage() {
               </table>
             </div>
           </div>
-
-          {/* Team list - Mobile view */}
+          
+          {/* Team list – Mobile View */}
           <div className="md:hidden space-y-4">
-            {filteredMembers.map((member) => (
+            {filteredMembers.map(member => (
               <div 
                 key={member.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden cursor-pointer"
                 onClick={() => handleEditMember(member.id)}
               >
                 <div className="p-4">
@@ -309,9 +335,7 @@ export default function TeamPage() {
                       </div>
                     </div>
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      member.status === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
+                      member.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                     }`}>
                       {member.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
@@ -322,11 +346,7 @@ export default function TeamPage() {
                   </div>
                   
                   <div className="text-sm text-gray-700 mb-3">
-                    <strong>Date Joined:</strong> {new Date(member.date).toLocaleDateString('en-US', {
-                      year: 'numeric', 
-                      month: 'short', 
-                      day: 'numeric'
-                    })}
+                    <strong>Date Joined:</strong> {new Date(member.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                   </div>
                   
                   <div className="flex justify-between items-center pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
@@ -365,7 +385,7 @@ export default function TeamPage() {
               </div>
             ))}
           </div>
-            
+          
           {filteredMembers.length === 0 && (
             <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-200">
               <div className="text-gray-500">
@@ -379,7 +399,7 @@ export default function TeamPage() {
               </button>
             </div>
           )}
-            
+          
           {filteredMembers.length > 0 && (
             <div className="bg-white mt-4 px-4 py-3 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 rounded-b-xl sm:px-6">
               <div className="text-sm text-gray-700 mb-4 sm:mb-0">

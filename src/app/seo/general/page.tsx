@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../../components/Sidebar';
 import { usePathname } from 'next/navigation';
 import { 
@@ -11,63 +11,64 @@ import {
   InfoIcon,
   FileText,
   Chrome,
-  UserRoundCog
+  UserRoundCog,
+  Menu,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SEOGeneralPage() {
-  // Get current pathname
   const pathname = usePathname();
   
-  // State for form inputs
+  // Form input states
   const [gtmId, setGtmId] = useState('');
   const [metaPixelId, setMetaPixelId] = useState('');
   const [linkedinPixelId, setLinkedinPixelId] = useState('');
   
-  // State for toggles
+  // Toggle states
   const [metaPixelEnabled, setMetaPixelEnabled] = useState(false);
   const [linkedinPixelEnabled, setLinkedinPixelEnabled] = useState(false);
   const [metaTrackingEnabled, setMetaTrackingEnabled] = useState(false);
   const [linkedinTrackingEnabled, setLinkedinTrackingEnabled] = useState(false);
 
-  // New state for social media links
+  // Social media links
   const [facebookUrl, setFacebookUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [instagramUrl, setInstagramUrl] = useState('');
   
-  // State for form validation and submission
+  // Submission states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveStatus, setSaveStatus] = useState<null | 'success' | 'error'>(null);
 
-  // Function to handle form submission
+  // Mobile and sidebar toggle state
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => {
+    const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call
+    // Simulate API call with basic GTM ID validation
     setTimeout(() => {
-      // Check if GTM ID follows format GTM-XXXXXX
       const gtmRegex = /^GTM-[A-Z0-9]{1,7}$/;
-      
       if (gtmId && !gtmRegex.test(gtmId)) {
         setSaveStatus('error');
         setIsSubmitting(false);
         return;
       }
-      
-      // Here you can also add API logic to update social links dynamically.
-      // For now, we simulate success.
+      // Simulate success
       setSaveStatus('success');
       setIsSubmitting(false);
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSaveStatus(null);
-      }, 3000);
+      setTimeout(() => setSaveStatus(null), 3000);
     }, 1000);
   };
 
-  // Function to reset form
   const handleReset = () => {
     setGtmId('');
     setMetaPixelId('');
@@ -76,7 +77,6 @@ export default function SEOGeneralPage() {
     setLinkedinPixelEnabled(false);
     setMetaTrackingEnabled(false);
     setLinkedinTrackingEnabled(false);
-    // Reset social media links
     setFacebookUrl('');
     setLinkedinUrl('');
     setInstagramUrl('');
@@ -85,22 +85,50 @@ export default function SEOGeneralPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Include the Sidebar */}
-      <Sidebar />
+      {/* Sidebar with toggle control */}
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
       
-      {/* Main content with its own scrollable area */}
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex items-center mb-6">
-            <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
-              <ArrowLeft size={20} />
-            </Link>
-            <h1 className="text-2xl font-semibold flex items-center">
-            <Chrome size={22} className="mr-2" />
-            SEO Settings</h1>
+        {/* Full-width Sticky Header */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          <div className="p-4 md:p-6">
+            {isMobile ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                    aria-label="Toggle sidebar"
+                  >
+                    {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                  </button>
+                  <Link href="/" className="p-1">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl font-medium ml-2 flex items-center">
+                  <Chrome size={22} className="mr-2" />
+                    SEO Settings</h1>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-2xl font-semibold flex items-center">
+                    <Chrome size={22} className="mr-2" />
+                    SEO Settings
+                  </h1>
+                </div>
+                {/* (Additional desktop actions can be added here if needed) */}
+              </div>
+            )}
           </div>
-
+        </div>
+        
+        {/* Main Content Container */}
+        <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
           {/* Tabs */}
           <div className="mb-6 border-b border-gray-200">
             <div className="flex space-x-6">
@@ -131,7 +159,6 @@ export default function SEOGeneralPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit}>
-            {/* Save Status Message */}
             {saveStatus && (
               <div className={`mb-4 p-3 rounded-xl flex items-center ${
                 saveStatus === 'success' 
@@ -148,7 +175,7 @@ export default function SEOGeneralPage() {
                 }
               </div>
             )}
-
+            
             {/* Google Tag Manager Section */}
             <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-6">
               <div className="flex items-center justify-between mb-4">
@@ -174,9 +201,7 @@ export default function SEOGeneralPage() {
                     <InfoIcon size={16} className="text-gray-400" />
                   </div>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  Format: GTM-XXXXXXX
-                </p>
+                <p className="mt-1 text-xs text-gray-500">Format: GTM-XXXXXXX</p>
               </div>
             </div>
 
@@ -185,16 +210,11 @@ export default function SEOGeneralPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-medium">Pixels</h2>
               </div>
-              <p className="text-gray-500 text-sm mb-4">
-                Configure tracking pixels for different platforms.
-              </p>
-              
+              <p className="text-gray-500 text-sm mb-4">Configure tracking pixels for different platforms.</p>
               {/* Meta Pixel */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-2">
-                  <label htmlFor="metaPixelId" className="block text-sm font-medium text-gray-700">
-                    Meta Pixel
-                  </label>
+                  <label htmlFor="metaPixelId" className="block text-sm font-medium text-gray-700">Meta Pixel</label>
                   <div className="relative inline-block w-10 mr-2 align-middle select-none">
                     <input 
                       type="checkbox" 
@@ -219,13 +239,10 @@ export default function SEOGeneralPage() {
                   disabled={!metaPixelEnabled}
                 />
               </div>
-              
               {/* LinkedIn Pixel */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label htmlFor="linkedinPixelId" className="block text-sm font-medium text-gray-700">
-                    LinkedIn Insight Tag
-                  </label>
+                  <label htmlFor="linkedinPixelId" className="block text-sm font-medium text-gray-700">LinkedIn Insight Tag</label>
                   <div className="relative inline-block w-10 mr-2 align-middle select-none">
                     <input 
                       type="checkbox" 
@@ -260,14 +277,11 @@ export default function SEOGeneralPage() {
               <p className="text-gray-500 text-sm mb-4">
                 Configure additional tracking options and preferences.
               </p>
-              
               {/* Meta Tracking */}
               <div className="flex items-center justify-between py-3 border-b border-gray-100">
                 <div>
                   <h3 className="text-sm font-medium text-gray-700">Meta Tracking</h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enable advanced Meta tracking features.
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Enable advanced Meta tracking features.</p>
                 </div>
                 <div className="relative inline-block w-10 mr-2 align-middle select-none">
                   <input 
@@ -283,14 +297,11 @@ export default function SEOGeneralPage() {
                   ></label>
                 </div>
               </div>
-              
               {/* LinkedIn Tracking */}
               <div className="flex items-center justify-between py-3">
                 <div>
                   <h3 className="text-sm font-medium text-gray-700">LinkedIn Tracking</h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enable advanced LinkedIn tracking features.
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Enable advanced LinkedIn tracking features.</p>
                 </div>
                 <div className="relative inline-block w-10 mr-2 align-middle select-none">
                   <input 
@@ -313,9 +324,7 @@ export default function SEOGeneralPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-medium">Social Media Links</h2>
               </div>
-              <p className="text-gray-500 text-sm mb-4">
-                Add links to your social media profiles.
-              </p>
+              <p className="text-gray-500 text-sm mb-4">Add links to your social media profiles.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Facebook */}
                 <div>

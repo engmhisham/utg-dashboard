@@ -89,56 +89,44 @@ const sampleFAQs = [
 ];
 
 export default function FAQsPage() {
-  // Get current pathname
   const pathname = usePathname();
-  
-  // State for search query and filtering
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [showPublishedOnly, setShowPublishedOnly] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // Check if mobile on client side
+  // Check if mobile view
   useEffect(() => {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
     checkIfMobile();
     window.addEventListener('resize', checkIfMobile);
-    
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
   
-  // Toggle FAQ expansion
   const toggleFAQ = (id: number) => {
     setExpandedFAQ(expandedFAQ === id ? null : id);
   };
   
-  // Filtered FAQs based on search and category
+  // Filter FAQs based on search, category, and publish state
   const filteredFAQs = sampleFAQs.filter(faq => {
-    // Apply search filter
     const matchesSearch = 
       faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
       faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // Apply category filter
     const matchesCategory = selectedCategory === null || faq.categoryId === selectedCategory;
-    
-    // Apply published filter
     const matchesPublished = !showPublishedOnly || faq.published;
-    
     return matchesSearch && matchesCategory && matchesPublished;
   });
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar />
+      {/* Pass sidebar control props */}
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
       
-      {/* Define animation styles */}
       <style jsx global>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(-10px); }
@@ -149,10 +137,8 @@ export default function FAQsPage() {
         }
       `}</style>
       
-      {/* Main content */}
       <main className="flex-1 flex flex-col overflow-y-auto">
-        {/* Mobile Header */}
-        {isMobile && (
+        {/* {isMobile && (
           <div className="sticky top-0 z-10">
             <div className="p-3 border-b border-gray-200 flex justify-between items-center bg-white">
               <div className="flex items-center">
@@ -162,6 +148,13 @@ export default function FAQsPage() {
                 <h1 className="text-xl font-medium">FAQs</h1>
               </div>
               <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                  aria-label="Toggle sidebar"
+                >
+                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
                 <button 
                   onClick={() => setShowMobileFilter(!showMobileFilter)} 
                   className={`p-1 rounded-full ${showMobileFilter ? 'bg-blue-100 text-blue-600' : ''}`}
@@ -180,7 +173,6 @@ export default function FAQsPage() {
               </div>
             </div>
             
-            {/* Mobile Search Bar - Show when toggled */}
             {showMobileFilter && (
               <div className="p-3 bg-white border-b border-gray-200 animate-fade-in">
                 <div className="relative mb-2">
@@ -203,15 +195,10 @@ export default function FAQsPage() {
                   )}
                 </div>
                 
-                {/* Category filters */}
                 <div className="flex space-x-2 overflow-x-auto py-2">
                   <button
                     onClick={() => setSelectedCategory(null)}
-                    className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${
-                      selectedCategory === null 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-gray-200 text-gray-700'
-                    }`}
+                    className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${selectedCategory === null ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
                   >
                     All
                   </button>
@@ -219,18 +206,13 @@ export default function FAQsPage() {
                     <button
                       key={category.id}
                       onClick={() => setSelectedCategory(category.id)}
-                      className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${
-                        selectedCategory === category.id 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-gray-200 text-gray-700'
-                      }`}
+                      className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${selectedCategory === category.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
                     >
                       {category.name}
                     </button>
                   ))}
                 </div>
                 
-                {/* Published filter toggle */}
                 <div className="flex items-center mt-2">
                   <label className="flex items-center cursor-pointer">
                     <div className="relative">
@@ -249,18 +231,117 @@ export default function FAQsPage() {
               </div>
             )}
           </div>
+        )} */}
+        {/* Mobile Header with Sidebar toggle button positioned before the back button */}
+        {isMobile && (
+          <div className="sticky top-0 z-10">
+            <div className="p-3 border-b border-gray-200 flex justify-between items-center bg-white">
+              {/* Left side: Sidebar toggle, then back button, then title */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                  aria-label="Toggle sidebar"
+                >
+                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+                <Link href="/" className="p-1">
+                  <ChevronLeft size={20} />
+                </Link>
+                <h1 className="text-xl font-medium">FAQs</h1>
+              </div>
+
+              {/* Right side: Filter and Search buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowMobileFilter(!showMobileFilter)}
+                  className={`p-1 rounded-full ${showMobileFilter ? 'bg-blue-100 text-blue-600' : ''}`}
+                >
+                  <Filter size={18} />
+                </button>
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setShowMobileFilter(true);
+                  }}
+                  className="p-1"
+                >
+                  <Search size={18} />
+                </button>
+              </div>
+            </div>
+
+            {showMobileFilter && (
+              <div className="p-3 bg-white border-b border-gray-200 animate-fade-in">
+                <div className="relative mb-2">
+                  <input
+                    type="text"
+                    placeholder="Search FAQs..."
+                    className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoFocus
+                  />
+                  <Search size={16} className="absolute left-2.5 top-2.5 text-gray-400" />
+                  {searchQuery && (
+                    <button
+                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex space-x-2 overflow-x-auto py-2">
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${selectedCategory === null ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                  >
+                    All
+                  </button>
+                  {categories.map(category => (
+                    <button
+                      key={category.id}
+                      onClick={() => setSelectedCategory(category.id)}
+                      className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${selectedCategory === category.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center mt-2">
+                  <label className="flex items-center cursor-pointer">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={showPublishedOnly}
+                        onChange={() => setShowPublishedOnly(!showPublishedOnly)}
+                      />
+                      <div className={`w-10 h-5 ${showPublishedOnly ? 'bg-blue-500' : 'bg-gray-300'} rounded-full shadow-inner transition-colors`}></div>
+                      <div className={`absolute left-0 top-0 w-5 h-5 bg-white rounded-full shadow transform transition-transform ${showPublishedOnly ? 'translate-x-5' : ''}`}></div>
+                    </div>
+                    <div className="ml-3 text-sm">Published only</div>
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         <div className="p-4 md:p-6 flex-1 flex flex-col">
-          {/* Desktop Header - Hide on mobile */}
+          {/* Desktop Header */}
           <div className="hidden md:flex items-center justify-between mb-6">
             <div className="flex items-center">
               <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
                 <ArrowLeft size={20} />
               </Link>
               <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-              <MessageCircleQuestion size={22} className="mr-2" />
-                Frequently Asked Questions</h1>
+                <MessageCircleQuestion size={22} className="mr-2" />
+                Frequently Asked Questions
+              </h1>
             </div>
             <button className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
               <Plus size={18} className="mr-2" />
@@ -268,17 +349,13 @@ export default function FAQsPage() {
             </button>
           </div>
 
-          {/* Desktop Filters - Hide on mobile */}
+          {/* Desktop Filters */}
           <div className="hidden md:flex flex-wrap justify-between items-center gap-4 bg-white rounded-xl p-4 border border-gray-200 mb-6">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-medium">Category:</span>
               <button
                 onClick={() => setSelectedCategory(null)}
-                className={`px-3 py-1 rounded-full text-sm ${
-                  selectedCategory === null 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+                className={`px-3 py-1 rounded-full text-sm ${selectedCategory === null ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
               >
                 All
               </button>
@@ -286,11 +363,7 @@ export default function FAQsPage() {
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`px-3 py-1 rounded-full text-sm ${
-                    selectedCategory === category.id 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
+                  className={`px-3 py-1 rounded-full text-sm ${selectedCategory === category.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
                 >
                   {category.name}
                 </button>
@@ -378,8 +451,6 @@ export default function FAQsPage() {
                   {expandedFAQ === faq.id && (
                     <div className="p-4 pt-0 animate-fade-in">
                       <p className="text-gray-600">{faq.answer}</p>
-                      
-                      {/* Mobile action buttons - only shown in expanded view on mobile */}
                       {isMobile && (
                         <div className="flex justify-end mt-4 space-x-2">
                           <button className="p-2 text-indigo-600 border border-indigo-200 rounded-lg">
@@ -403,7 +474,7 @@ export default function FAQsPage() {
             )}
           </div>
           
-          {/* Mobile Add Button - Fixed */}
+          {/* Mobile Add Button */}
           {isMobile && (
             <div className="fixed bottom-4 right-4 z-10">
               <button className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg">

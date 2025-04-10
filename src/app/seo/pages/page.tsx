@@ -13,11 +13,11 @@ import {
   Menu,
   ChevronLeft,
   Chrome,
-  UserRoundCog
+  UserRoundCog,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 
-// Sample data for the pages table
 const samplePages = [
   { id: 1, name: 'Home', url: '/', metaTitle: 'Welcome to UTG', metaDescription: 'Your ultimate marketing solution' },
   { id: 2, name: 'About Us', url: '/about', metaTitle: 'About Our Company', metaDescription: 'Learn more about our team and mission' },
@@ -27,28 +27,22 @@ const samplePages = [
 ];
 
 export default function SEOPagesPage() {
-  // Get current pathname
   const pathname = usePathname();
-  
-  // State for search query
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Manage mobile state, search bar toggle, and sidebar state
   const [isMobile, setIsMobile] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  
-  // Check if mobile on client side
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
+    const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
     checkIfMobile();
     window.addEventListener('resize', checkIfMobile);
-    
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-  
-  // Filtered pages based on search
-  const filteredPages = samplePages.filter(page => 
+
+  const filteredPages = samplePages.filter(page =>
     page.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     page.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
     page.metaTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -57,103 +51,53 @@ export default function SEOPagesPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Include the Sidebar - hide on mobile */}
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
-      
-      {/* Main content - with its own scrollable area */}
+      {/* Sidebar with required props always passed */}
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+
       <main className="flex-1 overflow-y-auto">
-        {/* For Mobile */}
-        {isMobile && (
-          <div className="sticky top-0 z-10">
-            {/* Mobile Header */}
-            <div className="bg-white p-3 border-b flex items-center justify-between">
-              <div className="flex items-center">
-                <Link href="/" className="p-1 mr-2">
-                  <ChevronLeft size={20} />
-                </Link>
-                <h1 className="text-xl font-medium flex items-center">
-                <Chrome size={22} className="mr-2" />
-                  SEO Settings</h1>
+        {/* Full‑width Sticky Header (with its own padding) */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          <div className="p-3 md:p-6">
+            {isMobile ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                    aria-label="Toggle sidebar"
+                  >
+                    {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                  </button>
+                  <Link href="/" className="p-1 mr-2">
+                    <ChevronLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl font-medium flex items-center">
+                    <Chrome size={22} className="mr-2" />
+                    SEO Settings
+                  </h1>
+                </div>
               </div>
-              <button 
-                className={`p-2 rounded-full ${showSearch ? 'bg-blue-100 text-blue-600' : ''}`}
-                onClick={() => setShowSearch(!showSearch)}
-              >
-                <Search size={20} />
-              </button>
-            </div>
-
-            {/* Tabs - Mobile */}
-            <div className="bg-white border-b px-3">
-              <div className="flex space-x-6">
-                <Link 
-                  href="/seo/general" 
-                  className={`px-1 py-3 border-b-2 font-medium flex items-center ${
-                    pathname === '/seo/general' 
-                      ? 'border-blue-500 text-blue-600' 
-                      : 'border-transparent text-gray-500'
-                  }`}
-                >
-                  <UserRoundCog size={20} className="mr-2" />
-                  General
-                </Link>
-                <Link 
-                  href="/seo/pages" 
-                  className={`px-1 py-3 border-b-2 font-medium flex items-center ${
-                    pathname === '/seo/pages' 
-                      ? 'border-blue-500 text-blue-600' 
-                      : 'border-transparent text-gray-500'
-                  }`}
-                >
-                  <FileText size={20} className="mr-2" />
-                  Pages
-                </Link>
-              </div>
-            </div>
-
-            {/* Mobile Search Bar - Conditional */}
-            {showSearch && (
-              <div className="bg-white border-b p-3 animate-fade-in">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search pages..."
-                    className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    autoFocus
-                  />
-                  <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
-                  {searchQuery && (
-                    <button 
-                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                      onClick={() => setSearchQuery('')}
-                    >
-                      ×
-                    </button>
-                  )}
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-2xl font-semibold flex items-center">
+                    <Chrome size={22} className="mr-2" />
+                    SEO Settings
+                  </h1>
                 </div>
               </div>
             )}
           </div>
-        )}
+        </div>
 
-        <div className="p-4 md:p-6">
-          {/* Desktop Header - Hide on mobile */}
-          <div className="hidden md:flex items-center mb-6">
-            <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
-              <ArrowLeft size={20} />
-            </Link>
-            <h1 className="text-2xl font-semibold flex items-center">
-            <Chrome size={22} className="mr-2" />
-              SEO Settings</h1>
-          </div>
-
-          {/* Desktop Tabs - Hide on mobile */}
-          <div className="hidden md:block mb-6 border-b border-gray-200">
-            <div className="flex space-x-6">
+        {/* Main Content Container with horizontal margins */}
+        <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
+          {/* Desktop Tabs & Search (only for md and up) */}
+          <div className=" md:flex flex-col md:flex-row justify-between mb-6 gap-4">
+            <div className="flex space-x-6 mb-6">
               <Link 
                 href="/seo/general" 
                 className={`px-1 py-2 border-b-2 font-medium flex items-center ${
@@ -177,11 +121,7 @@ export default function SEOPagesPage() {
                 Pages
               </Link>
             </div>
-          </div>
-
-          {/* Desktop Search and Add button - Hide on mobile */}
-          <div className="hidden md:flex flex-col md:flex-row justify-between mb-6 space-y-4 md:space-y-0 gap-4">
-            <div className="relative w-full md:w-1/3">
+            {/* <div className="relative w-full md:w-1/3">
               <input
                 type="text"
                 placeholder="Search pages..."
@@ -190,85 +130,40 @@ export default function SEOPagesPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
-            </div>
-            <button className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-auto">
+            </div> */}
+            {/* <button className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-auto">
               <Plus size={18} className="mr-2" />
               Add Page
-            </button>
+            </button> */}
           </div>
 
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-3">
-            {filteredPages.length > 0 ? (
-              filteredPages.map((page) => (
-                <div key={page.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center">
-                      <FileText size={16} className="text-gray-400 mr-2" />
-                      <div className="text-sm font-medium text-gray-900">{page.name}</div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <button className="text-indigo-600 hover:text-indigo-900 p-1">
-                        <PencilLine size={16} />
-                      </button>
-                      <button className="text-red-600 hover:text-red-900 p-1">
-                        <Trash size={16} />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div>
-                      <div className="text-xs font-medium text-gray-500 uppercase">URL</div>
-                      <div className="text-sm text-gray-600">{page.url}</div>
-                    </div>
-                    
-                    <div>
-                      <div className="text-xs font-medium text-gray-500 uppercase">Meta Title</div>
-                      <div className="text-sm text-gray-900">{page.metaTitle}</div>
-                    </div>
-                    
-                    <div>
-                      <div className="text-xs font-medium text-gray-500 uppercase">Meta Description</div>
-                      <div className="text-sm text-gray-500 line-clamp-2">{page.metaDescription}</div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center shadow">
-                <div className="text-sm text-gray-500">
-                  No pages found matching your search.
-                </div>
+          {/* Mobile Tabs and Search (for mobile views) */}
+          {isMobile && (
+            <>
+              <div className="hidden md:hidden">
+                {/* This block is not rendered because it’s handled above */}
               </div>
-            )}
-            
-            {/* Mobile Add Button - Fixed */}
-            <div className="fixed bottom-4 right-4 z-10">
-              <button className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg">
-                <Plus size={24} />
-              </button>
-            </div>
-          </div>
+            </>
+          )}
 
-          {/* Table - Desktop Version */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow hidden md:block">
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden shadow">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Page Name
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     URL
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Meta Title
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Meta Description
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -315,9 +210,58 @@ export default function SEOPagesPage() {
             </table>
           </div>
 
-          {/* Pagination - Desktop only */}
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {filteredPages.length > 0 ? (
+              filteredPages.map((page) => (
+                <div key={page.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow cursor-pointer" onClick={() => {}}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center">
+                      <FileText size={16} className="text-gray-400 mr-2" />
+                      <div className="text-sm font-medium text-gray-900">{page.name}</div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button className="text-indigo-600 hover:text-indigo-900 p-1">
+                        <PencilLine size={16} />
+                      </button>
+                      <button className="text-red-600 hover:text-red-900 p-1">
+                        <Trash size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-xs font-medium text-gray-500 uppercase">URL</div>
+                      <div className="text-sm text-gray-600">{page.url}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-gray-500 uppercase">Meta Title</div>
+                      <div className="text-sm text-gray-900">{page.metaTitle}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-gray-500 uppercase">Meta Description</div>
+                      <div className="text-sm text-gray-500 line-clamp-2">{page.metaDescription}</div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center shadow">
+                <div className="text-sm text-gray-500">
+                  No pages found matching your search.
+                </div>
+              </div>
+            )}
+            <div className="fixed bottom-4 right-4 z-10">
+              <button className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg">
+                <Plus size={24} />
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop Pagination */}
           {filteredPages.length > 0 && !isMobile && (
-            <div className="bg-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 sm:px-6 rounded-b-xl mt-0">
+            <div className="bg-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 sm:px-6 rounded-b-xl">
               <div className="mb-4 sm:mb-0 text-center sm:text-left">
                 <p className="text-sm text-gray-700">
                   Showing <span className="font-medium">1</span> to <span className="font-medium">{filteredPages.length}</span> of{' '}
@@ -344,7 +288,7 @@ export default function SEOPagesPage() {
                   </a>
                   <a
                     href="#"
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     <span className="sr-only">Next</span>
                     <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../../../components/Sidebar';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
@@ -9,118 +9,154 @@ import {
   Upload,
   Image as ImageIcon,
   ChevronDown,
-  RefreshCw,
-  Trash,
-  UsersRound
+  UsersRound,
+  Menu,
+  Trash2,
+  PencilLine,
+  MoreHorizontal
 } from 'lucide-react';
 import Link from 'next/link';
 
-// Sample team member data (normally from an API)
+// Sample team member data – normally from an API
 const sampleTeamMembers = [
   { 
     id: '1', 
     name: 'John Doe',
     title: 'CEO',
     status: 'active',
-    cover: '/covers/john-doe.jpg'
+    cover: '/covers/john-doe.jpg',
+    date: '2025-03-15'
   },
   { 
     id: '2', 
     name: 'Jane Smith',
     title: 'CTO',
     status: 'active',
-    cover: '/covers/jane-smith.jpg'
+    cover: '/covers/jane-smith.jpg',
+    date: '2025-03-10'
   },
   { 
     id: '3', 
     name: 'Emily Johnson',
     title: 'Project Manager',
     status: 'active',
-    cover: '/covers/emily-johnson.jpg'
+    cover: '/covers/emily-johnson.jpg',
+    date: '2025-02-28'
   },
   { 
     id: '4', 
     name: 'Michael Brown',
     title: 'UI/UX Designer',
     status: 'inactive',
-    cover: '/covers/michael-brown.jpg'
+    cover: '/covers/michael-brown.jpg',
+    date: '2025-02-20'
   },
   { 
     id: '5', 
     name: 'Sarah Lee',
     title: 'Marketing Manager',
     status: 'inactive',
-    cover: '/covers/sarah-lee.jpg'
+    cover: '/covers/sarah-lee.jpg',
+    date: '2025-02-15'
   }
 ];
 
 export default function TeamEditPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const pathname = usePathname();
-  
-  // Find the team member by ID or fallback
+
+  // Find team member by id or fallback
   const member = sampleTeamMembers.find(m => m.id === params.id) || sampleTeamMembers[0];
-  
-  // Form state
+
+  // Form state for team member details
   const [formData, setFormData] = useState({
     name: member.name,
     title: member.title,
     status: member.status,
     cover: member.cover
   });
-  
+
+  // Mobile and sidebar toggle state
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => {
+    const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Form data submitted:', formData);
     router.push('/team');
   };
-  
+
   const handleCancel = () => {
     router.push('/team');
   };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar />
-      
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto relative">
-        <div className="p-4 md:p-6 pb-24 md:pb-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <div className="flex items-center">
-              <Link href="/team" className="text-gray-500 hover:text-gray-700 mr-2">
-                <ArrowLeft size={20} />
-              </Link>
-              <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-              <UsersRound size={22} className="mr-2" />
-                Editing Team Member</h1>
-            </div>
-            <div className="flex space-x-3 w-full sm:w-auto">
-              <button
-                onClick={handleCancel}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 flex-1 sm:flex-initial"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 flex-1 sm:flex-initial"
-              >
-                Save
-              </button>
-            </div>
-          </div>
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
+      <main className="flex-1 overflow-y-auto relative">
+        {/* Full‑width Sticky Header */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          <div className="p-4 md:p-6">
+            {isMobile ? (
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                  aria-label="Toggle sidebar"
+                >
+                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+                <Link href="/team" className="text-gray-500 hover:text-gray-700">
+                  <ArrowLeft size={20} />
+                </Link>
+                <h1 className="text-xl font-medium ml-2 flex items-center">
+                <UsersRound size={22} className="mr-2" />
+                  Editing Team Member</h1>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Link href="/team" className="text-gray-500 hover:text-gray-700 mr-2">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl md:text-2xl font-semibold flex items-center">
+                    <UsersRound size={22} className="mr-2" />
+                    Editing Team Member
+                  </h1>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleCancel}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Main Content Container */}
+        <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
           <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
             {/* Status Section */}
             <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
@@ -136,17 +172,14 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
                     className="sr-only"
                   />
                   <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                    formData.status === 'active' 
-                      ? 'border-blue-500 bg-blue-500' 
+                    formData.status === 'active'
+                      ? 'border-blue-500 bg-blue-500'
                       : 'border-gray-300'
                   }`}>
-                    {formData.status === 'active' && (
-                      <Check size={12} className="text-white" />
-                    )}
+                    {formData.status === 'active' && <Check size={12} className="text-white" />}
                   </div>
                   <span className="ml-2">Active</span>
                 </label>
-                
                 <label className="inline-flex items-center cursor-pointer">
                   <input
                     type="radio"
@@ -161,9 +194,7 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
                       ? 'border-blue-500 bg-blue-500'
                       : 'border-gray-300'
                   }`}>
-                    {formData.status === 'inactive' && (
-                      <Check size={12} className="text-white" />
-                    )}
+                    {formData.status === 'inactive' && <Check size={12} className="text-white" />}
                   </div>
                   <span className="ml-2">Inactive</span>
                 </label>
@@ -206,7 +237,9 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
                     <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                       <ImageIcon size={32} className="text-gray-400" />
                     </div>
-                    <p className="text-gray-500 mb-4 text-center">Drag & drop cover image here, or click to browse</p>
+                    <p className="text-gray-500 mb-4 text-center">
+                      Drag &amp; drop cover image here, or click to browse
+                    </p>
                     <button 
                       type="button"
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -252,37 +285,9 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
               </div>
             </div>
 
-            {/* Delete and Actions Section */}
-            <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
-              <h2 className="text-lg font-medium mb-4">Actions</h2>
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 w-full"
-                >
-                  <RefreshCw size={16} className="mr-2" />
-                  Reset to Original
-                </button>
-                
-                <button
-                  type="button"
-                  className="flex items-center justify-center px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 w-full"
-                  onClick={() => {
-                    if (confirm('Are you sure you want to delete this team member?')) {
-                      // Delete logic would go here
-                      router.push('/team');
-                    }
-                  }}
-                >
-                  <Trash size={16} className="mr-2" />
-                  Delete Member
-                </button>
-              </div>
-            </div>
-
             {/* Mobile Submit Buttons */}
             <div className="md:hidden">
-              <div className="fixed p-4 bg-white border-t border-gray-200 bottom-0 ml-0 w-full" style={{ left: 0, width: 'inherit', right: 0 }}>
+              <div className="fixed p-4 bg-white border-t border-gray-200 bottom-0 left-0 w-full">
                 <div className="flex space-x-3">
                   <button
                     type="button"

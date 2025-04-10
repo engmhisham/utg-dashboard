@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   ArrowLeft, 
   Search, 
@@ -20,7 +20,8 @@ import {
   Tag,
   Menu,
   Inbox,
-  Mails
+  Mails,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -105,65 +106,55 @@ const sampleEmails = [
   }
 ];
 
+// Helper to format dates
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const today = new Date();
+  if (date.toDateString() === today.toDateString()) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  if (date.getFullYear() === today.getFullYear()) {
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+  return date.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
 export default function EmailsPage() {
-  // Get current pathname
+  const router = useRouter();
   const pathname = usePathname();
   
-  // State for emails and filters
+  // State for search, filtering, and selection
   const [emails, setEmails] = useState(sampleEmails);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedEmails, setSelectedEmails] = useState<number[]>([]);
+  
+  // For mobile view, sidebar toggle, and filter toggle
   const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   
-  // Check if mobile on client side
   useEffect(() => {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
     checkIfMobile();
     window.addEventListener('resize', checkIfMobile);
-    
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-
-  // Format date to a readable string
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    
-    // If the email is from today, just show the time
-    if (date.toDateString() === today.toDateString()) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    
-    // If the email is from this year, show the month and day
-    if (date.getFullYear() === today.getFullYear()) {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-    
-    // Otherwise, show the full date
-    return date.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
-  };
   
   // Filter emails based on search and filter selection
   const filteredEmails = emails.filter(email => {
-    // Apply search filter
     const matchesSearch = 
       email.sender.toLowerCase().includes(searchQuery.toLowerCase()) ||
       email.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
       email.preview.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // Apply category filter
     let matchesFilter = true;
     if (selectedFilter === 'unread') {
       matchesFilter = !email.read;
     } else if (selectedFilter === 'starred') {
       matchesFilter = email.starred;
     }
-    
     return matchesSearch && matchesFilter;
   });
   
@@ -209,40 +200,70 @@ export default function EmailsPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Using the Sidebar component that already has mobile toggle functionality */}
-      <Sidebar />
+      {/* Pass sidebar control props */}
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
       
-      {/* Main content */}
       <main className="flex-1 flex flex-col overflow-y-auto">
-        {/* Mobile Header */}
-        <div className="p-3 border-b border-gray-200 flex justify-between items-center bg-white md:hidden sticky top-0 z-10">
-          <div className="flex items-center">
-            <Link href="/" className="p-1 mr-2">
-              <ChevronLeft size={20} />
-            </Link>
-            <h1 className="text-xl font-medium">Emails</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setShowMobileFilter(!showMobileFilter)} 
-              className={`p-1 rounded-full ${showMobileFilter ? 'bg-blue-100 text-blue-600' : ''}`}
-            >
-              <Filter size={18} />
-            </button>
-            <button 
-              onClick={() => {
-                setSearchQuery('');
-                setShowMobileFilter(true);
-              }} 
-              className="p-1"
-            >
-              <Search size={18} />
-            </button>
+        {/* Sticky Header (Full width, no container padding) */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          <div className="p-3 md:p-6">
+            {isMobile ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                    aria-label="Toggle sidebar"
+                  >
+                    {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                  </button>
+                  <Link href="/" className="p-1 mr-2">
+                    <ChevronLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl font-medium flex items-center">
+                  <Mails size={22} className="mr-2" />
+                    Emails</h1>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setShowMobileFilter(!showMobileFilter)} 
+                    className={`p-1 rounded-full ${showMobileFilter ? 'bg-blue-100 text-blue-600' : ''}`}
+                  >
+                    <Filter size={18} />
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setSearchQuery('');
+                      setShowMobileFilter(true);
+                    }} 
+                    className="p-1"
+                  >
+                    <Search size={18} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
+                <div className="flex items-center">
+                  <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-2xl font-semibold flex items-center">
+                    <Mails size={22} className="mr-2" />
+                    Emails
+                  </h1>
+                </div>
+                <button className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto">
+                  <Plus size={18} className="mr-2" />
+                  Compose
+                </button>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Mobile Search Bar - Show when toggled */}
-        {showMobileFilter && (
+        
+        {/* Mobile Search Bar (Shown when toggled) */}
+        {showMobileFilter && isMobile && (
           <div className="p-3 bg-white border-b border-gray-200 md:hidden animate-fade-in sticky top-12 z-10">
             <div className="relative mb-2">
               <input
@@ -267,9 +288,7 @@ export default function EmailsPage() {
               <button
                 onClick={() => setSelectedFilter('all')}
                 className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${
-                  selectedFilter === 'all' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-200 text-gray-700'
+                  selectedFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
                 }`}
               >
                 All
@@ -277,9 +296,7 @@ export default function EmailsPage() {
               <button
                 onClick={() => setSelectedFilter('unread')}
                 className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${
-                  selectedFilter === 'unread' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-200 text-gray-700'
+                  selectedFilter === 'unread' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
                 }`}
               >
                 Unread
@@ -287,9 +304,7 @@ export default function EmailsPage() {
               <button
                 onClick={() => setSelectedFilter('starred')}
                 className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${
-                  selectedFilter === 'starred' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-200 text-gray-700'
+                  selectedFilter === 'starred' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
                 }`}
               >
                 Starred
@@ -298,26 +313,10 @@ export default function EmailsPage() {
           </div>
         )}
         
-        <div className="p-3 md:p-6 flex-1 flex flex-col">
-          {/* Desktop Header - Hide on mobile */}
-          <div className="hidden md:flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-6 gap-3">
-            <div className="flex items-center">
-              <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
-                <ArrowLeft size={20} />
-              </Link>
-              <h1 className="text-2xl font-semibold flex items-center">
-              <Mails size={22} className="mr-2" />
-                Emails</h1>
-            </div>
-            <button className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto">
-              <Plus size={18} className="mr-2" />
-              Compose
-            </button>
-          </div>
-
-          {/* Desktop Toolbar - Hide on mobile */}
+        {/* Content Container */}
+        <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
+          {/* Desktop Toolbar */}
           <div className="hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white rounded-t-xl border border-gray-200 p-3 mb-0">
-            {/* Left section - Bulk actions */}
             <div className="flex items-center space-x-2">
               <input 
                 type="checkbox" 
@@ -325,7 +324,6 @@ export default function EmailsPage() {
                 checked={selectedEmails.length > 0 && selectedEmails.length === filteredEmails.length}
                 onChange={selectAllEmails}
               />
-              
               {selectedEmails.length > 0 ? (
                 <>
                   <button 
@@ -362,8 +360,6 @@ export default function EmailsPage() {
                 </button>
               )}
             </div>
-            
-            {/* Right section - Search and filter */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
               <div className="relative w-full sm:w-auto">
                 <input
@@ -375,7 +371,6 @@ export default function EmailsPage() {
                 />
                 <Search size={16} className="absolute left-2.5 top-2 text-gray-400" />
               </div>
-              
               <div className="relative inline-block w-full sm:w-auto">
                 <button className="flex items-center px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 w-full sm:w-auto justify-between sm:justify-start">
                   <div className="flex items-center">
@@ -387,20 +382,19 @@ export default function EmailsPage() {
                   </div>
                   <ChevronDown size={16} className="ml-1 text-gray-500" />
                 </button>
-                
-                {/* We'd implement a dropdown here in a real application */}
+                {/* Dropdown options could be added here */}
               </div>
             </div>
           </div>
 
-          {/* Mobile Compose Button - Fixed at bottom */}
+          {/* Mobile Compose Button */}
           <div className="fixed bottom-4 right-4 z-20 md:hidden">
             <button className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg">
               <Plus size={24} />
             </button>
           </div>
 
-          {/* Email list */}
+          {/* Email List */}
           <div className={`bg-white ${isMobile ? 'rounded-none' : 'rounded-b-xl md:rounded-t-none'} border-x border-b border-gray-200 overflow-hidden flex-1`}>
             {filteredEmails.length > 0 ? (
               <div className="divide-y divide-gray-200">
@@ -410,7 +404,6 @@ export default function EmailsPage() {
                     className={`flex flex-col p-3 cursor-pointer hover:bg-gray-50 ${!email.read && 'bg-blue-50'}`}
                     onClick={() => toggleEmailSelection(email.id)}
                   >
-                    {/* Email Layout */}
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
                         <input 
@@ -434,14 +427,10 @@ export default function EmailsPage() {
                         {formatDate(email.date)}
                       </p>
                     </div>
-                    
-                    {/* Sender and Subject */}
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium ${!email.read && 'font-semibold'}`}>
                         {email.sender}
                       </p>
-                      
-                      {/* Tags */}
                       <div className="flex flex-wrap gap-1 my-1">
                         {email.tags.map((tag, index) => (
                           <span 
@@ -453,7 +442,6 @@ export default function EmailsPage() {
                           </span>
                         ))}
                       </div>
-                      
                       <p className={`text-sm ${!email.read && 'font-semibold'}`}>
                         {email.subject}
                       </p>
@@ -479,7 +467,7 @@ export default function EmailsPage() {
             )}
           </div>
           
-          {/* Pagination footer - Desktop only */}
+          {/* Pagination Footer (Desktop only) */}
           {filteredEmails.length > 0 && !isMobile && (
             <div className="bg-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 sm:px-6 rounded-b-xl gap-3">
               <div className="text-center sm:text-left">

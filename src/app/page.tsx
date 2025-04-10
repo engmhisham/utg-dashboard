@@ -99,13 +99,12 @@ const dealsData: Deal[] = [
 
 export default function Page() {
   return (
-    <div className="flex h-screen bg-white">
-      <Sidebar />
+
       <Dashboard 
         project={projectData}
         budgetData={budgetData}
         deals={dealsData}
       />
-    </div>
+
   );
 }

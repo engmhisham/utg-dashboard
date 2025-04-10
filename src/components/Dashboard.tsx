@@ -1,14 +1,19 @@
-// components/Dashboard.tsx
-import { FC } from 'react';
+'use client';
+import { FC, useState, useEffect } from 'react';
+import Sidebar from './Sidebar';
 import ProjectHeader from './ProjectHeader';
 import BudgetChart from './BudgetChart';
 import DealsTable from './DealsTable';
 import { Project, BudgetData, Deal } from '../types';
 import { 
-  ArrowLeft, Search, BarChart2, FileText, Package, Settings, Users, Building, 
-  HelpCircle, Bell, ChevronDown, Filter, ArrowUpDown, Download, Plus, 
-  RefreshCw, MoreHorizontal, CheckCircle
+  ArrowLeft,
+  ChevronLeft,
+  Chrome,
+  LayoutDashboard,
+  Menu,
+  X
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface DashboardProps {
   project: Project;
@@ -17,40 +22,71 @@ interface DashboardProps {
 }
 
 const Dashboard: FC<DashboardProps> = ({ project, budgetData, deals }) => {
+  // Mobile detection and sidebar state
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+
   return (
-    <div className="flex-1 p-6 bg-gray-50 overflow-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-2 text-sm text-gray-500">
-          <button className="hover:text-gray-700">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M11 17l-5-5m0 0l5-5m-5 5h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <div className="flex items-center space-x-1">
-            <span>Dashboard</span>
-            <span>/</span>
-            <span className="text-gray-800 font-medium">{project.name}</span>
+    <div className="flex h-screen overflow-hidden bg-gray-50">
+      {/* Always pass the required sidebar props */}
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      
+      <main className="flex-1 overflow-y-auto">
+        {/* Full‑width Sticky Header with its own padding */}
+        <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
+          <div className="p-4 md:p-6">
+            {isMobile ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                    aria-label="Toggle sidebar"
+                  >
+                    {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                  </button>
+                  <Link href="/" className="p-1">
+                    <ChevronLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl font-medium flex items-center">
+                  <LayoutDashboard size={22} className="mr-2" />
+                    Dashboard</h1>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 text-sm text-gray-500">
+                  <button className="hover:text-gray-700">
+                    <ArrowLeft size={20} />
+                  </button>
+                  <div className="flex items-center space-x-1">
+                    <span className="flex items-center">
+                    <LayoutDashboard size={22} className="mr-2" />
+                      Dashboard</span>
+                    <span>/</span>
+                    <span className="text-gray-800 font-medium">{project.name}</span>
+                  </div>
+                </div>
+                {/* (Optional: Add desktop-specific header actions here) */}
+              </div>
+            )}
           </div>
         </div>
-        
-        <div className="flex items-center space-x-3">
-          <button className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-            Manage
-          </button>
-          <button className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-            Share
-          </button>
-          <button className="p-2 text-gray-500 hover:text-gray-700">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+
+        {/* Main Content Container with horizontal margins */}
+        <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
+          <ProjectHeader project={project} />
+          <BudgetChart data={budgetData} />
+          <DealsTable deals={deals} />
         </div>
-      </div>
-      
-      <ProjectHeader project={project} />
-      <BudgetChart data={budgetData} />
-      <DealsTable deals={deals} />
+      </main>
     </div>
   );
 };

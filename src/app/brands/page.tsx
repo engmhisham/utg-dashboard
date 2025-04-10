@@ -1,4 +1,3 @@
-//src/app/brands/page.tsx
 'use client';
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
@@ -8,13 +7,12 @@ import {
   Search, 
   Plus, 
   ChevronDown,
-  Check,
-  Filter,
-  Building2,
+  Box,
   Trash2,
   PencilLine,
   MoreHorizontal,
-  Box
+  Menu,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -66,22 +64,21 @@ export default function BrandsPage() {
   const router = useRouter();
   const pathname = usePathname();
   
-  // State for filtering and search
+  // States for search, filtering, and sidebar control
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [isMobile, setIsMobile] = useState(false);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // Check if mobile on client side
+  // Check for mobile view changes
   useEffect(() => {
-    const checkIfMobile = () => {
+    const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
-    checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    
-    return () => window.removeEventListener('resize', checkIfMobile);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
   
   // Toggle brand selection
@@ -93,7 +90,7 @@ export default function BrandsPage() {
     }
   };
   
-  // Select all brands
+  // Select/deselect all brands
   const toggleSelectAll = () => {
     if (selectedBrands.length === filteredBrands.length) {
       setSelectedBrands([]);
@@ -102,54 +99,84 @@ export default function BrandsPage() {
     }
   };
   
-  // Handle edit brand
+  // Handle brand edit navigation
   const handleEditBrand = (id: string) => {
     router.push(`/brands/edit/${id}`);
   };
   
   // Filter brands based on search and status
   const filteredBrands = sampleBrands.filter(brand => {
-    // Apply search filter
     const matchesSearch = 
       brand.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       brand.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // Apply status filter
     const matchesStatus = 
       statusFilter === 'all' || 
       (statusFilter === 'active' && brand.status === 'active') ||
       (statusFilter === 'inactive' && brand.status === 'inactive');
-    
     return matchesSearch && matchesStatus;
   });
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar />
+      {/* Pass sidebar control props */}
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
       
-      {/* Main content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="p-4 md:p-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <div className="flex items-center">
-              <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
-                <ArrowLeft size={20} />
-              </Link>
-              <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-              <Box size={22} className="mr-2" />
-                Brands</h1>
-            </div>
-            <button 
-              onClick={() => router.push('/brands/create')}
-              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
-            >
-              <Plus size={18} className="mr-2" />
-              Add Brand
-            </button>
-          </div>
+        {/* Sticky Header (full width, no horizontal padding) */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          <div className="p-4 md:p-6">
+            {isMobile ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                    aria-label="Toggle sidebar"
+                  >
+                    {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                  </button>
+                  <Link href="/" className="text-gray-500 hover:text-gray-700">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl font-medium ml-2 flex items-center">
+                  <Box size={22} className="mr-2" />
+                    Brands</h1>
+                </div>
+                {/* Add Brand Button for mobile */}
+                <button
+                  onClick={() => router.push('/brands/create')}
+                  className="flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+            ) : (
+              // Desktop header code remains unchanged.
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl md:text-2xl font-semibold flex items-center">
+                    <Box size={22} className="mr-2" />
+                    Brands
+                  </h1>
+                </div>
+                <button
+                  onClick={() => router.push('/brands/create')}
+                  className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <Plus size={18} className="mr-2" />
+                  Add Brand
+                </button>
+              </div>
+            )}
 
+          </div>
+        </div>
+        
+        {/* Page Content Container with margins (excludes header) */}
+        <div className="mx-auto max-w-7xl px-4 pb-6">
           {/* Filters */}
           <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-gray-200">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -166,11 +193,11 @@ export default function BrandsPage() {
               
               <div className="flex items-center gap-2 w-full md:w-auto">
                 <span className="text-sm font-medium text-gray-600">Status:</span>
-                <div className="relative flex-1 md:flex-initial">
+                <div className="relative">
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="pl-3 pr-8 py-2 w-full border border-gray-300 rounded-lg bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="pl-3 pr-8 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="all">All</option>
                     <option value="active">Active</option>
@@ -182,13 +209,13 @@ export default function BrandsPage() {
             </div>
           </div>
 
-          {/* Brands list - Desktop view */}
-          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Brands List – Desktop View */}
+          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <div className="flex items-center">
                         <input
                           type="checkbox"
@@ -198,19 +225,19 @@ export default function BrandsPage() {
                         />
                       </div>
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Brand
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Description
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Date
                     </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -241,7 +268,7 @@ export default function BrandsPage() {
                             {brand.logo ? (
                               <img src={brand.logo} alt={brand.title} className="h-full w-full object-cover" />
                             ) : (
-                              <Building2 className="text-gray-500" size={20} />
+                              <Box className="text-gray-500" size={20} />
                             )}
                           </div>
                           <div className="ml-4">
@@ -263,9 +290,7 @@ export default function BrandsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(brand.date).toLocaleDateString('en-US', {
-                          year: 'numeric', 
-                          month: 'short', 
-                          day: 'numeric'
+                          year: 'numeric', month: 'short', day: 'numeric'
                         })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -294,12 +319,12 @@ export default function BrandsPage() {
             </div>
           </div>
 
-          {/* Brands list - Mobile view */}
+          {/* Brands List – Mobile View */}
           <div className="md:hidden space-y-4">
             {filteredBrands.map((brand) => (
-              <div 
+              <div
                 key={brand.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden cursor-pointer"
                 onClick={() => handleEditBrand(brand.id)}
               >
                 <div className="p-4">
@@ -309,7 +334,7 @@ export default function BrandsPage() {
                         {brand.logo ? (
                           <img src={brand.logo} alt={brand.title} className="h-full w-full object-cover" />
                         ) : (
-                          <Building2 className="text-gray-500" size={20} />
+                          <Box className="text-gray-500" size={20} />
                         )}
                       </div>
                       <div className="ml-3">
@@ -331,9 +356,7 @@ export default function BrandsPage() {
                   
                   <div className="text-sm text-gray-700 mb-3">
                     <strong>Date:</strong> {new Date(brand.date).toLocaleDateString('en-US', {
-                      year: 'numeric', 
-                      month: 'short', 
-                      day: 'numeric'
+                      year: 'numeric', month: 'short', day: 'numeric'
                     })}
                   </div>
                   
