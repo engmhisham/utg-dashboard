@@ -14,7 +14,8 @@ import {
   Trash2,
   Filter,
   Menu,
-  X
+  X,
+  MessageCircleQuestion
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -257,7 +258,9 @@ export default function FAQsPage() {
               <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
                 <ArrowLeft size={20} />
               </Link>
-              <h1 className="text-2xl font-semibold">Frequently Asked Questions</h1>
+              <h1 className="text-xl md:text-2xl font-semibold flex items-center">
+              <MessageCircleQuestion size={22} className="mr-2" />
+                Frequently Asked Questions</h1>
             </div>
             <button className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
               <Plus size={18} className="mr-2" />

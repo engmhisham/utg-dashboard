@@ -11,7 +11,9 @@ import {
   Trash,
   PencilLine,
   Menu,
-  ChevronLeft
+  ChevronLeft,
+  Chrome,
+  UserRoundCog
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -71,7 +73,9 @@ export default function SEOPagesPage() {
                 <Link href="/" className="p-1 mr-2">
                   <ChevronLeft size={20} />
                 </Link>
-                <h1 className="text-xl font-medium">SEO Settings</h1>
+                <h1 className="text-xl font-medium flex items-center">
+                <Chrome size={22} className="mr-2" />
+                  SEO Settings</h1>
               </div>
               <button 
                 className={`p-2 rounded-full ${showSearch ? 'bg-blue-100 text-blue-600' : ''}`}
@@ -86,22 +90,24 @@ export default function SEOPagesPage() {
               <div className="flex space-x-6">
                 <Link 
                   href="/seo/general" 
-                  className={`px-1 py-3 border-b-2 font-medium ${
+                  className={`px-1 py-3 border-b-2 font-medium flex items-center ${
                     pathname === '/seo/general' 
                       ? 'border-blue-500 text-blue-600' 
                       : 'border-transparent text-gray-500'
                   }`}
                 >
+                  <UserRoundCog size={20} className="mr-2" />
                   General
                 </Link>
                 <Link 
                   href="/seo/pages" 
-                  className={`px-1 py-3 border-b-2 font-medium ${
+                  className={`px-1 py-3 border-b-2 font-medium flex items-center ${
                     pathname === '/seo/pages' 
                       ? 'border-blue-500 text-blue-600' 
                       : 'border-transparent text-gray-500'
                   }`}
                 >
+                  <FileText size={20} className="mr-2" />
                   Pages
                 </Link>
               </div>
@@ -140,7 +146,9 @@ export default function SEOPagesPage() {
             <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
               <ArrowLeft size={20} />
             </Link>
-            <h1 className="text-2xl font-semibold">SEO Settings</h1>
+            <h1 className="text-2xl font-semibold flex items-center">
+            <Chrome size={22} className="mr-2" />
+              SEO Settings</h1>
           </div>
 
           {/* Desktop Tabs - Hide on mobile */}
@@ -148,22 +156,24 @@ export default function SEOPagesPage() {
             <div className="flex space-x-6">
               <Link 
                 href="/seo/general" 
-                className={`px-1 py-2 border-b-2 font-medium ${
+                className={`px-1 py-2 border-b-2 font-medium flex items-center ${
                   pathname === '/seo/general' 
                     ? 'border-blue-500 text-blue-600' 
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
+                <UserRoundCog size={22} className="mr-2" />
                 General
               </Link>
               <Link 
                 href="/seo/pages" 
-                className={`px-1 py-2 border-b-2 font-medium ${
+                className={`px-1 py-2 border-b-2 font-medium flex items-center ${
                   pathname === '/seo/pages' 
                     ? 'border-blue-500 text-blue-600' 
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
+                <FileText size={22} className="mr-2" />
                 Pages
               </Link>
             </div>

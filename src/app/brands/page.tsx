@@ -13,7 +13,8 @@ import {
   Building2,
   Trash2,
   PencilLine,
-  MoreHorizontal
+  MoreHorizontal,
+  Box
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -136,7 +137,9 @@ export default function BrandsPage() {
               <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
                 <ArrowLeft size={20} />
               </Link>
-              <h1 className="text-xl md:text-2xl font-semibold">Brands</h1>
+              <h1 className="text-xl md:text-2xl font-semibold flex items-center">
+              <Box size={22} className="mr-2" />
+                Brands</h1>
             </div>
             <button 
               onClick={() => router.push('/brands/create')}
