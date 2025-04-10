@@ -48,12 +48,12 @@ export default function ResponsiveLayout({
         )}
 
         {/* Mobile Sidebar */}
-        <div className={`
+        {/* <div className={`
           fixed top-0 left-0 w-64 h-full bg-white transform transition-transform duration-300 z-50
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
           <Sidebar />
-        </div>
+        </div> */}
 
         {/* Main Content */}
         <main className="h-full overflow-y-auto pt-16 px-4">
@@ -67,9 +67,9 @@ export default function ResponsiveLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
       {/* Fixed Sidebar */}
-      <div className="w-64 h-screen flex-shrink-0 fixed">
+      {/* <div className="w-64 h-screen flex-shrink-0 fixed">
         <Sidebar />
-      </div>
+      </div> */}
       
       {/* Main content with left margin */}
       <main className="ml-64 flex-1 overflow-y-auto">
