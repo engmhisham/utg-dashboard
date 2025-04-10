@@ -212,7 +212,7 @@ export default function ContactPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
                           <button 
-                            className="text-red-600 hover:text-red-900"
+                            className="text-red-600 hover:text-red-900 m-auto"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDelete(message.id);
@@ -220,7 +220,7 @@ export default function ContactPage() {
                           >
                             <Trash2 size={16} />
                           </button>
-                          <button 
+                          {/* <button 
                             className="text-gray-400 hover:text-gray-600"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -231,7 +231,7 @@ export default function ContactPage() {
                           </button>
                           <button className="text-gray-400 hover:text-gray-600">
                             <MoreHorizontal size={16} />
-                          </button>
+                          </button> */}
                         </div>
                       </td>
                     </tr>
