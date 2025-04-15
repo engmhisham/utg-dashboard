@@ -20,6 +20,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import Link from 'next/link';
+ 
 
 const sampleTestimonials = [
   { 
@@ -80,6 +81,7 @@ const sampleTestimonials = [
 ];
 
 export default function TestimonialsPage() {
+    
   const router = useRouter();
   const pathname = usePathname();
 
@@ -98,7 +100,7 @@ export default function TestimonialsPage() {
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-
+     
   const toggleTestimonialSelection = (id: string) => {
     if (selectedTestimonials.includes(id)) {
       setSelectedTestimonials(selectedTestimonials.filter(t => t !== id));

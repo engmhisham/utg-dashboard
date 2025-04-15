@@ -4,8 +4,10 @@ import Sidebar from '../../../components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, UsersRound, Menu, X } from 'lucide-react';
 import Link from 'next/link';
+  
 
 export default function ClientCreatePage() {
+    
   const router = useRouter();
   
   // Form state for a new client
@@ -28,7 +30,7 @@ export default function ClientCreatePage() {
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-
+     
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({

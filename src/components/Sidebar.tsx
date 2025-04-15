@@ -1,14 +1,14 @@
-// components/Sidebar.tsx
 'use client';
+
 import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
 import NavItem from './nav/NavItem';
 import SubNavItem from './nav/SubNavItem';
 import { usePathname } from 'next/navigation';
-import { 
-  Search, FileText, Users, BookCopy, HelpCircle, Bell, UsersRound, Mails, MessageCircleQuestion, Chrome, LayoutDashboard, Box, X,
-  UserRoundCog,
-  BookUser
+import Cookies from 'js-cookie';
+import {
+  Search, FileText, ShieldUser, BookCopy, LogOut, UsersRound, Mails,
+  MessageCircleQuestion, Chrome, LayoutDashboard, Box, UserRoundCog, BookUser
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -19,9 +19,18 @@ interface SidebarProps {
 const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
+  const [user, setUser] = useState<{ username?: string } | null>(null);
   const pathname = usePathname();
 
-  // Handle window resize to determine if mobile
+  // Redirect if not authenticated
+  useEffect(() => {
+    const token = Cookies.get('accessToken');
+    if (!token) {
+      window.location.href = '/login';
+    }
+  }, []);
+
+  // Detect screen size
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -31,10 +40,13 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Set active submenu based on current path
+  // Handle active submenu
   useEffect(() => {
     if (pathname?.includes('/seo')) {
       setActiveSubmenu('seo');
+    }
+    if (isMobile && isOpen) {
+      toggleSidebar(); // auto-close sidebar on mobile after route change
     }
   }, [pathname]);
 
@@ -44,23 +56,49 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
 
   const isPathActive = (path: string) => pathname === path;
 
+  // Load user
+  useEffect(() => {
+    try {
+      const userData = localStorage.getItem('user');
+      if (userData && userData !== 'undefined') {
+        setUser(JSON.parse(userData));
+      }
+    } catch (err) {
+      console.error('Failed to parse user data:', err);
+      setUser(null);
+    }
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      const token = Cookies.get('accessToken');
+      if (!token) return;
+
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      Cookies.remove('accessToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   return (
     <>
-      <aside 
+      <aside
         className={`w-56 bg-gray-100 border-r border-gray-300 ${
-          isMobile ? 'fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out' : 'hidden md:block'
+          isMobile
+            ? 'fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out'
+            : 'hidden md:block'
         } ${isMobile && !isOpen ? '-translate-x-full' : 'translate-x-0'}`}
       >
-        {/* Close button for mobile view (inside the sidebar) */}
-        {/* {isMobile && (
-          <button 
-            onClick={toggleSidebar} 
-            className="absolute top-4 right-4 p-2 bg-white rounded-lg shadow-md border border-gray-200"
-            aria-label="Close sidebar"
-          >
-            <X size={24} />
-          </button>
-        )} */}
         <div className="w-[220px] border-r flex flex-col">
           <div className="p-4 border-b flex items-center">
             <div className="font-bold text-xl flex items-center">
@@ -73,11 +111,12 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
             </div>
           </div>
         </div>
+
         <div className="p-3">
           <div className="relative">
-            <input 
-              type="text" 
-              placeholder="Search..." 
+            <input
+              type="text"
+              placeholder="Search..."
               className="w-full bg-gray-100 border-2 border-gray-300 rounded-xl px-8 py-2 text-sm"
             />
             <Search size={14} className="absolute left-2.5 top-2.5 text-gray-500" />
@@ -86,118 +125,54 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
 
         <nav className="mt-4 overflow-y-auto max-h-[calc(100vh-240px)]">
           <ul>
-            <NavItem 
-              icon={<LayoutDashboard size={16} />} 
-              text="Dashboard" 
-              className="border border-transparent hover:bg-white hover:border-gray-300 cursor-pointer w-48 m-auto text-sm" 
-              active={isPathActive('/')}
-              href="/"
-            />
-            {/* SEO with submenu */}
+            <NavItem icon={<LayoutDashboard size={16} />} text="Dashboard" href="/dashboard" active={isPathActive('/dashboard')} className="w-48 m-auto text-sm" />
+            
             <div>
-              <NavItem 
-                icon={<Chrome size={16} />} 
-                text="SEO" 
-                className="border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer w-48 m-auto text-sm"
+              <NavItem
+                icon={<Chrome size={16} />}
+                text="SEO"
                 hasSubmenu={true}
-                isActive={activeSubmenu === 'seo' || pathname?.includes('/seo')}
+                isActive={activeSubmenu === 'seo'}
                 onClick={() => toggleSubmenu('seo')}
+                className="w-48 m-auto text-sm"
               />
               {activeSubmenu === 'seo' && (
                 <div className="ml-2 mt-1">
-                  <SubNavItem 
-                    text="General" 
-                    icon={<UserRoundCog size={16} />} 
-                    url="/seo/general" 
-                    className="w-40 ml-10"
-                    active={isPathActive('/seo/general')}
-                  />
-                  <SubNavItem 
-                    text="Pages" 
-                    icon={<FileText size={16} />} 
-                    url="/seo/pages" 
-                    className="w-40 ml-10"
-                    active={isPathActive('/seo/pages')}
-                  />
+                  <SubNavItem text="General" icon={<UserRoundCog size={16} />} url="/seo/general" className="w-40 ml-10" active={isPathActive('/seo/general')} />
+                  <SubNavItem text="Pages" icon={<FileText size={16} />} url="/seo/pages" className="w-40 ml-10" active={isPathActive('/seo/pages')} />
                 </div>
               )}
             </div>
-            <NavItem 
-              icon={<Mails size={16} />} 
-              text="Emails" 
-              badge="164" 
-              className="border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer w-48 m-auto text-sm"
-              active={isPathActive('/emails')}
-              href="/emails"
-            />
-            <NavItem 
-              icon={<UsersRound size={16} />} 
-              text="Clients" 
-              className="border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer w-48 m-auto text-sm"
-              active={isPathActive('/clients')}
-              href="/clients"
-            />
-            <NavItem 
-              icon={<UsersRound size={16} />} 
-              text="Team" 
-              badge="New" 
-              className="border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer w-48 m-auto text-sm"
-              active={isPathActive('/team')}
-              href="/team"
-            />
-            <NavItem 
-              icon={<BookCopy size={16} />} 
-              text="Testimonials" 
-              className="border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer w-48 m-auto text-sm"
-              active={isPathActive('/testimonials')}
-              href="/testimonials"
-            />
-            <NavItem 
-              icon={<Box size={16} />} 
-              text="Brands" 
-              badge="164" 
-              className="border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer w-48 m-auto text-sm"
-              active={isPathActive('/brands')}
-              href="/brands"
-            />
-            <NavItem 
-              icon={<BookUser size={16} />} 
-              text="contact"
-              className="border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer w-48 m-auto text-sm"
-              active={isPathActive('/contact')}
-              href="/contact"
-            />
-            <NavItem 
-              icon={<MessageCircleQuestion size={16} />} 
-              text="FAQs" 
-              badge="17" 
-              className="border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer w-48 m-auto text-sm"
-              active={isPathActive('/faqs')}
-              href="/faqs"
-            />
+
+            <NavItem icon={<Mails size={16} />} text="Emails" badge="164" href="/emails" active={isPathActive('/emails')} className="w-48 m-auto text-sm" />
+            <NavItem icon={<UsersRound size={16} />} text="Clients" href="/clients" active={isPathActive('/clients')} className="w-48 m-auto text-sm" />
+            <NavItem icon={<UsersRound size={16} />} text="Team" badge="New" href="/team" active={isPathActive('/team')} className="w-48 m-auto text-sm" />
+            <NavItem icon={<BookCopy size={16} />} text="Testimonials" href="/testimonials" active={isPathActive('/testimonials')} className="w-48 m-auto text-sm" />
+            <NavItem icon={<Box size={16} />} text="Brands" badge="164" href="/brands" active={isPathActive('/brands')} className="w-48 m-auto text-sm" />
+            <NavItem icon={<BookUser size={16} />} text="Contact" href="/contact" active={isPathActive('/contact')} className="w-48 m-auto text-sm" />
+            <NavItem icon={<MessageCircleQuestion size={16} />} text="FAQs" badge="17" href="/faqs" active={isPathActive('/faqs')} className="w-48 m-auto text-sm" />
           </ul>
         </nav>
 
-        <div className="mt-auto border-t border-gray-200 pt-4 pb-2 px-4 absolute bottom-0 w-56">
-          {/* <div className="flex items-center gap-2 py-2 px-2 rounded-xl border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer">
-            <HelpCircle size={16} className="text-gray-500" />
-            <span className="text-sm">Help center</span>
-          </div> */}
-          {/* <div className="flex items-center gap-2 py-2 px-2 rounded-xl border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer">
-            <Bell size={16} className="text-gray-500" />
-            <span className="text-sm">Notifications</span>
-            <span className="ml-auto bg-red-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">3</span>
-          </div> */}
+        <div className="mt-auto border-t border-gray-200 pt-0 pb-2 px-4 absolute bottom-0 w-56">
           <div className="flex items-center gap-2 py-2 px-2 rounded-xl border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer mt-2">
-            <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center text-xs">EC</div>
-            <span className="text-sm">Ember Crest</span>
+            <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center text-xs">
+              <ShieldUser size={16} />
+            </div>
+            <span className="text-sm">{user?.username ?? 'Ember Crest'}</span>
+          </div>
+          <div
+            onClick={handleLogout}
+            className="flex items-center gap-2 py-2 px-3 rounded-xl border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer text-red-600"
+          >
+            <LogOut size={16} />
+            <span className="text-sm">Logout</span>
           </div>
         </div>
       </aside>
 
-      {/* Optional overlay for mobile */}
       {isMobile && isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30"
           onClick={toggleSidebar}
           aria-hidden="true"

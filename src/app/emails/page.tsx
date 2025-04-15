@@ -24,6 +24,7 @@ import {
   X
 } from 'lucide-react';
 import Link from 'next/link';
+ 
 
 // Sample data for the emails
 const sampleEmails = [
@@ -120,6 +121,7 @@ const formatDate = (dateString: string) => {
 };
 
 export default function EmailsPage() {
+    
   const router = useRouter();
   const pathname = usePathname();
   
@@ -142,7 +144,7 @@ export default function EmailsPage() {
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-  
+     
   // Filter emails based on search and filter selection
   const filteredEmails = emails.filter(email => {
     const matchesSearch = 

@@ -12,6 +12,7 @@ import {
   X
 } from 'lucide-react';
 import Link from 'next/link';
+ 
 
 // Sample contact messages data
 const sampleMessages = [
@@ -45,6 +46,7 @@ const sampleMessages = [
 ];
 
 export default function ContactPage() {
+    
   const router = useRouter();
   const pathname = usePathname();
 
@@ -63,7 +65,7 @@ export default function ContactPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
+     
   // Filter messages based on the search query
   const filteredMessages = sampleMessages.filter(message => {
     const query = searchQuery.toLowerCase();

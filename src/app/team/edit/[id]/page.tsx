@@ -16,6 +16,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import Link from 'next/link';
+  
 
 // Sample team member data – normally from an API
 const sampleTeamMembers = [
@@ -62,6 +63,7 @@ const sampleTeamMembers = [
 ];
 
 export default function TeamEditPage({ params }: { params: { id: string } }) {
+    
   const router = useRouter();
   const pathname = usePathname();
 
@@ -85,7 +87,7 @@ export default function TeamEditPage({ params }: { params: { id: string } }) {
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-
+     
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));

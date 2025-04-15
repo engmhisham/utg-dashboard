@@ -16,8 +16,10 @@ import {
   X
 } from 'lucide-react';
 import Link from 'next/link';
+  
 
 export default function SEOGeneralPage() {
+    
   const pathname = usePathname();
   
   // Form input states
@@ -49,7 +51,7 @@ export default function SEOGeneralPage() {
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-
+     
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);

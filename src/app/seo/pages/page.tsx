@@ -17,6 +17,7 @@ import {
   X
 } from 'lucide-react';
 import Link from 'next/link';
+  
 
 const samplePages = [
   { id: 1, name: 'Home', url: '/', metaTitle: 'Welcome to UTG', metaDescription: 'Your ultimate marketing solution' },
@@ -27,6 +28,7 @@ const samplePages = [
 ];
 
 export default function SEOPagesPage() {
+    
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -41,7 +43,7 @@ export default function SEOPagesPage() {
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-
+     
   const filteredPages = samplePages.filter(page =>
     page.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     page.url.toLowerCase().includes(searchQuery.toLowerCase()) ||

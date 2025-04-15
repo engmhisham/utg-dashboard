@@ -1,43 +1,69 @@
 'use client';
-import { useState } from 'react';
+
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Cookies from 'js-cookie';
 
-/**
- * A responsive Login page inspired by your provided design screenshot.
- * Tailwind CSS is assumed to be set up globally.
- */
 export default function LoginPage() {
   const router = useRouter();
-  
-  // Local state for the login form
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Example login handler (replace with real auth logic)
-  const handleLogin = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    const token = Cookies.get('accessToken');
+    if (token) {
+      router.replace('/dashboard');
+    }
+  }, [router]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Logging in with:', { email, password });
-    // TODO: call your API or auth service here
-    router.push('/'); // navigate away on success, for example
+  
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(result.message || 'Login failed');
+      }
+  
+      const { accessToken, user } = result.data || {};
+  
+      if (accessToken && user) {
+        Cookies.set('accessToken', accessToken, { expires: 1 });
+        localStorage.setItem('user', JSON.stringify(user));
+        window.location.href = '/dashboard'; // Full reload to trigger middleware
+      } else {
+        alert('Login failed. Please try again.');
+      }
+    } catch (error: any) {
+      alert(error.message || 'An error occurred during login');
+      console.error('Login error:', error);
+    }
   };
+  
+  
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen w-full">
-      
       {/* Left Panel: Login Form */}
       <div className="w-full md:w-1/2 flex flex-col justify-center items-center px-6 py-8 bg-white">
-        {/* Logo or Brand Name */}
+        {/* Logo */}
         <div className="mb-8 flex items-center gap-2">
-          {/* Replace this text with your logo */}
-          <span className="text-4xl font-bold text-purple-800">
-            UTG 
-          </span>
-          <span className="text-2xl font-bold text-gray-800">
-            Dashboard
-          </span>
+          <span className="text-4xl font-bold text-purple-800">UTG</span>
+          <span className="text-2xl font-bold text-gray-800">Dashboard</span>
         </div>
-        
+
         {/* Login Form */}
         <form
           onSubmit={handleLogin}
@@ -101,14 +127,9 @@ export default function LoginPage() {
         </form>
       </div>
 
-      {/* Right Panel: Illustration & Text */}
+      {/* Right Panel: Illustration */}
       <div className="relative w-full md:w-3/4 h-96 md:h-screen overflow-hidden bg-purple-600 flex items-center justify-center">
-        {/* Content on top of the wave */}
         <div className="relative z-10 px-6 md:px-0 text-white text-center w-full">
-          {/* <h2 className="text-xl md:text-3xl font-semibold mb-4">
-            Welcome to UTG Admin Panel!
-          </h2> */}
-          {/* Placeholder illustration image */}
           <img
             src="/login1.png"
             alt="Login illustration"
@@ -116,7 +137,6 @@ export default function LoginPage() {
           />
         </div>
       </div>
-
     </div>
   );
 }

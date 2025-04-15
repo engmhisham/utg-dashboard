@@ -17,6 +17,7 @@ import {
   X
 } from 'lucide-react';
 import Link from 'next/link';
+ 
 
 // Sample team member data
 const sampleTeamMembers = [
@@ -63,6 +64,7 @@ const sampleTeamMembers = [
 ];
 
 export default function TeamPage() {
+    
   const router = useRouter();
   const pathname = usePathname();
   
@@ -81,7 +83,7 @@ export default function TeamPage() {
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-  
+     
   // Toggle selection for a member
   const toggleMemberSelection = (id: string) => {
     if (selectedMembers.includes(id)) {

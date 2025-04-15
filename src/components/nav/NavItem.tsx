@@ -1,6 +1,5 @@
-// components/nav/NavItem.tsx
-import React from 'react';
 import Link from 'next/link';
+import React from 'react';
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -23,11 +22,11 @@ const NavItem: React.FC<NavItemProps> = ({
   hasSubmenu = false,
   isActive = false,
   onClick,
-  href
+  href,
 }) => {
   const content = (
     <div
-      className={`flex items-center justify-between p-2 rounded-xl ${className} ${
+      className={`flex items-center justify-between p-2 rounded-xl cursor-pointer ${className} ${
         active || isActive ? 'bg-white border-2 border-gray-300' : ''
       }`}
       onClick={onClick}
@@ -38,32 +37,45 @@ const NavItem: React.FC<NavItemProps> = ({
       </div>
       <div className="flex items-center">
         {badge && (
-          <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
-            badge === 'New' 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-gray-100 text-gray-800'
-          }`}>
+          <span
+            className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
+              badge === 'New'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-gray-100 text-gray-800'
+            }`}
+          >
             {badge}
           </span>
         )}
         {hasSubmenu && (
-          <svg 
-            width="16" 
-            height="16" 
-            viewBox="0 0 16 16" 
-            fill="none" 
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
             xmlns="http://www.w3.org/2000/svg"
             className={`ml-1 ${isActive ? 'transform rotate-90' : ''}`}
           >
-            <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path
+              d="M6 12L10 8L6 4"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         )}
       </div>
     </div>
   );
 
-  if (href && !onClick) {
-    return <Link href={href}>{content}</Link>;
+  if (href) {
+    return (
+      <Link href={href}>
+        {/* Just return the styled div as Link’s child (no <a>) */}
+        {content}
+      </Link>
+    );
   }
 
   return content;

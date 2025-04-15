@@ -4,6 +4,7 @@ import Sidebar from '../../../../components/Sidebar';
 import { usePathname, useRouter } from 'next/navigation';
 import { ArrowLeft, Check, X, Upload, Image as ImageIcon, ChevronDown, RefreshCw, Trash, UsersRound, Menu } from 'lucide-react';
 import Link from 'next/link';
+  
 
 // Sample clients data (for demonstration purposes)
 const sampleClients = [
@@ -50,6 +51,7 @@ const sampleClients = [
 ];
 
 export default function ClientEditPage({ params }: { params: { id: string } }) {
+    
   const router = useRouter();
   const pathname = usePathname();
   
@@ -94,7 +96,7 @@ export default function ClientEditPage({ params }: { params: { id: string } }) {
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-
+     
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />

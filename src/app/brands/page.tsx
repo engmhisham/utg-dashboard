@@ -15,6 +15,7 @@ import {
   X
 } from 'lucide-react';
 import Link from 'next/link';
+ 
 
 // Sample brands data
 const sampleBrands = [
@@ -61,6 +62,8 @@ const sampleBrands = [
 ];
 
 export default function BrandsPage() {
+    
+
   const router = useRouter();
   const pathname = usePathname();
   
@@ -80,7 +83,7 @@ export default function BrandsPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
+     
   // Toggle brand selection
   const toggleBrandSelection = (id: string) => {
     if (selectedBrands.includes(id)) {

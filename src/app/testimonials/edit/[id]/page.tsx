@@ -15,6 +15,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import Link from 'next/link';
+  
 
 const sampleTestimonials = [
   { 
@@ -75,6 +76,7 @@ const sampleTestimonials = [
 ];
 
 export default function TestimonialEditPage({ params }: { params: { id: string } }) {
+    
   const router = useRouter();
   const pathname = usePathname();
   
@@ -101,7 +103,7 @@ export default function TestimonialEditPage({ params }: { params: { id: string }
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-
+     
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));

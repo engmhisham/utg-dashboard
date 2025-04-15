@@ -18,6 +18,7 @@ import {
   MessageCircleQuestion
 } from 'lucide-react';
 import Link from 'next/link';
+ 
 
 // Sample categories for FAQs
 const categories = [
@@ -89,6 +90,7 @@ const sampleFAQs = [
 ];
 
 export default function FAQsPage() {
+    
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -107,7 +109,7 @@ export default function FAQsPage() {
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-  
+     
   const toggleFAQ = (id: number) => {
     setExpandedFAQ(expandedFAQ === id ? null : id);
   };

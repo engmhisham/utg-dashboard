@@ -18,6 +18,7 @@ import {
   Trash
 } from 'lucide-react';
 import Link from 'next/link';
+  
 
 // Sample brands data – normally from an API or database
 const sampleBrands = [
@@ -64,6 +65,7 @@ const sampleBrands = [
 ];
 
 export default function BrandEditPage({ params }: { params: { id: string } }) {
+    
   const router = useRouter();
   const pathname = usePathname();
   
@@ -87,7 +89,7 @@ export default function BrandEditPage({ params }: { params: { id: string } }) {
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-  
+     
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({

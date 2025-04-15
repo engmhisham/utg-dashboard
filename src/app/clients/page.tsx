@@ -85,7 +85,6 @@ export default function ClientsPage() {
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-  
   const toggleClientSelection = (id: string) => {
     if (selectedClients.includes(id)) {
       setSelectedClients(selectedClients.filter(clientId => clientId !== id));
