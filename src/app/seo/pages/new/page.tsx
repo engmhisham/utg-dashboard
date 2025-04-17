@@ -1,7 +1,7 @@
 // app/seo/pages/new/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Cookies from 'js-cookie';
 import Sidebar from '../../../../components/Sidebar';
@@ -39,12 +39,12 @@ export default function AddPageSeoPage() {
   const [saveStatus, setSaveStatus] = useState<null|'success'|'error'>(null);
 
   // detect mobile
-  useState(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  });
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 768);
+        check();                       
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
