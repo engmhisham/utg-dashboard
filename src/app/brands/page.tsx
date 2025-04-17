@@ -2,79 +2,38 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { usePathname, useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  Search, 
-  Plus, 
+import {
+  ArrowLeft,
+  Search,
+  Plus,
   ChevronDown,
   Box,
   Trash2,
   PencilLine,
-  MoreHorizontal,
   Menu,
-  X
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
- 
-
-// Sample brands data
-const sampleBrands = [
-  { 
-    id: '1', 
-    title: 'TechNova',
-    description: 'Leading technology solutions provider',
-    status: 'active',
-    logo: '/logos/technova-logo.svg',
-    date: '2025-03-15'
-  },
-  { 
-    id: '2', 
-    title: 'EcoSmart',
-    description: 'Sustainable product innovations',
-    status: 'active',
-    logo: '/logos/ecosmart-logo.svg',
-    date: '2025-03-10'
-  },
-  { 
-    id: '3', 
-    title: 'UrbanStyle',
-    description: 'Contemporary fashion for modern professionals',
-    status: 'active',
-    logo: '/logos/urbanstyle-logo.svg',
-    date: '2025-02-28'
-  },
-  { 
-    id: '4', 
-    title: 'NutriLife',
-    description: 'Health and wellness products',
-    status: 'inactive',
-    logo: '/logos/nutrilife-logo.svg',
-    date: '2025-02-20'
-  },
-  { 
-    id: '5', 
-    title: 'SkyConnect',
-    description: 'Telecommunications and connectivity solutions',
-    status: 'inactive',
-    logo: '/logos/skyconnect-logo.svg',
-    date: '2025-02-15'
-  }
-];
+import Cookies from 'js-cookie';
 
 export default function BrandsPage() {
-    
-
   const router = useRouter();
   const pathname = usePathname();
-  
-  // States for search, filtering, and sidebar control
-  const [searchQuery, setSearchQuery] = useState('');
+
+  const [brands, setBrands] = useState([]);
+  const [totalBrands, setTotalBrands] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [language, setLanguage] = useState<'en' | 'ar'>('en');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  // Check for mobile view changes
+  const [isLoading, setIsLoading] = useState(false);
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+  // Handle screen size changes
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -83,49 +42,96 @@ export default function BrandsPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-     
-  // Toggle brand selection
+
+  // Fetch brands from backend
+  useEffect(() => {
+    const fetchBrands = async () => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.append('language', language);
+        if (statusFilter !== 'all') {
+          params.append('status', statusFilter);
+        }
+        const token = Cookies.get('accessToken');
+        const res = await fetch(`${API_BASE_URL}/brands?language=en&sortBy=createdAt&sortOrder=DESC`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        setBrands(data.data?.items || []);
+        setTotalBrands(data.data?.total || 0);
+      } catch (err) {
+        console.error('Error fetching brands:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBrands();
+  }, [statusFilter, language]);
+
+  // Filter by search (client-side)
+  const filteredBrands = brands.filter((brand: any) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      brand.name.toLowerCase().includes(query) ||
+      brand.description.toLowerCase().includes(query)
+    );
+  });
+
   const toggleBrandSelection = (id: string) => {
     if (selectedBrands.includes(id)) {
-      setSelectedBrands(selectedBrands.filter(brandId => brandId !== id));
+      setSelectedBrands(selectedBrands.filter((brandId) => brandId !== id));
     } else {
       setSelectedBrands([...selectedBrands, id]);
     }
   };
-  
-  // Select/deselect all brands
+
   const toggleSelectAll = () => {
     if (selectedBrands.length === filteredBrands.length) {
       setSelectedBrands([]);
     } else {
-      setSelectedBrands(filteredBrands.map(brand => brand.id));
+      setSelectedBrands(filteredBrands.map((b: any) => b.id));
     }
   };
-  
-  // Handle brand edit navigation
+
   const handleEditBrand = (id: string) => {
     router.push(`/brands/edit/${id}`);
   };
+  const handleDeleteBrand = async (id: string) => {
+    const confirmed = confirm('Are you sure you want to delete this brand?');
+    if (!confirmed) return;
   
-  // Filter brands based on search and status
-  const filteredBrands = sampleBrands.filter(brand => {
-    const matchesSearch = 
-      brand.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      brand.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = 
-      statusFilter === 'all' || 
-      (statusFilter === 'active' && brand.status === 'active') ||
-      (statusFilter === 'inactive' && brand.status === 'inactive');
-    return matchesSearch && matchesStatus;
-  });
+    const token = Cookies.get('accessToken');
+  
+    try {
+      const res = await fetch(`${API_BASE_URL}/brands/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to delete brand');
+      }
+  
+      // Remove the deleted brand from the list
+      setBrands((prev) => prev.filter((b: any) => b.id !== id));
+    } catch (error: any) {
+      console.error('Error deleting brand:', error);
+      alert(error.message || 'Something went wrong while deleting the brand');
+    }
+  };
+  
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Pass sidebar control props */}
       <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-      
       <main className="flex-1 overflow-y-auto">
-        {/* Sticky Header (full width, no horizontal padding) */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
           <div className="p-4 md:p-6">
             {isMobile ? (
@@ -134,7 +140,6 @@ export default function BrandsPage() {
                   <button
                     onClick={() => setSidebarOpen(!sidebarOpen)}
                     className="p-1 rounded-full bg-white shadow-md border border-gray-200"
-                    aria-label="Toggle sidebar"
                   >
                     {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
                   </button>
@@ -142,19 +147,18 @@ export default function BrandsPage() {
                     <ArrowLeft size={20} />
                   </Link>
                   <h1 className="text-xl font-medium ml-2 flex items-center">
-                  <Box size={22} className="mr-2" />
-                    Brands</h1>
+                    <Box size={22} className="mr-2" />
+                    Brands
+                  </h1>
                 </div>
-                {/* Add Brand Button for mobile */}
                 <button
                   onClick={() => router.push('/brands/create')}
-                  className="flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
                 >
                   <Plus size={18} />
                 </button>
               </div>
             ) : (
-              // Desktop header code remains unchanged.
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
@@ -167,18 +171,16 @@ export default function BrandsPage() {
                 </div>
                 <button
                   onClick={() => router.push('/brands/create')}
-                  className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
                 >
                   <Plus size={18} className="mr-2" />
                   Add Brand
                 </button>
               </div>
             )}
-
           </div>
         </div>
-        
-        {/* Page Content Container with margins (excludes header) */}
+
         <div className="mx-auto max-w-7xl px-4 pb-6">
           {/* Filters */}
           <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-gray-200">
@@ -187,252 +189,208 @@ export default function BrandsPage() {
                 <input
                   type="text"
                   placeholder="Search brands..."
-                  className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
               </div>
-              
+
               <div className="flex items-center gap-2 w-full md:w-auto">
                 <span className="text-sm font-medium text-gray-600">Status:</span>
-                <div className="relative">
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="pl-3 pr-8 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">All</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                  <ChevronDown size={16} className="absolute right-3 top-3 text-gray-500 pointer-events-none" />
-                </div>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="pl-3 pr-8 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+
+                <span className="ml-4 text-sm font-medium text-gray-600">Lang:</span>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value as 'en' | 'ar')}
+                  className="pl-3 pr-8 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="en">English</option>
+                  <option value="ar">Arabic</option>
+                </select>
               </div>
             </div>
           </div>
 
-          {/* Brands List – Desktop View */}
-          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                          checked={selectedBrands.length === filteredBrands.length && filteredBrands.length > 0}
-                          onChange={toggleSelectAll}
-                        />
-                      </div>
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Brand
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredBrands.map((brand) => (
-                    <tr 
-                      key={brand.id} 
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => handleEditBrand(brand.id)}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => {
-                        e.stopPropagation();
-                        toggleBrandSelection(brand.id);
-                      }}>
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                            checked={selectedBrands.includes(brand.id)}
-                            onChange={() => {}}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                            {brand.logo ? (
-                              <img src={brand.logo} alt={brand.title} className="h-full w-full object-cover" />
-                            ) : (
-                              <Box className="text-gray-500" size={20} />
-                            )}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{brand.title}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-500 max-w-xs truncate">{brand.description}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          brand.status === 'active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {brand.status === 'active' ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(brand.date).toLocaleDateString('en-US', {
-                          year: 'numeric', month: 'short', day: 'numeric'
-                        })}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                          <button 
-                            className="text-indigo-600 hover:text-indigo-900"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditBrand(brand.id);
-                            }}
-                          >
-                            <PencilLine size={16} />
-                          </button>
-                          <button className="text-red-600 hover:text-red-900">
-                            <Trash2 size={16} />
-                          </button>
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <MoreHorizontal size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Brands List – Mobile View */}
-          <div className="md:hidden space-y-4">
-            {filteredBrands.map((brand) => (
-              <div
-                key={brand.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden cursor-pointer"
-                onClick={() => handleEditBrand(brand.id)}
-              >
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                        {brand.logo ? (
-                          <img src={brand.logo} alt={brand.title} className="h-full w-full object-cover" />
-                        ) : (
-                          <Box className="text-gray-500" size={20} />
-                        )}
-                      </div>
-                      <div className="ml-3">
-                        <div className="text-sm font-medium text-gray-900">{brand.title}</div>
-                      </div>
-                    </div>
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      brand.status === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {brand.status === 'active' ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  
-                  <div className="text-sm text-gray-700 mb-3 line-clamp-2">
-                    {brand.description}
-                  </div>
-                  
-                  <div className="text-sm text-gray-700 mb-3">
-                    <strong>Date:</strong> {new Date(brand.date).toLocaleDateString('en-US', {
-                      year: 'numeric', month: 'short', day: 'numeric'
-                    })}
-                  </div>
-                  
-                  <div className="flex justify-between items-center pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 mr-2"
-                        checked={selectedBrands.includes(brand.id)}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          toggleBrandSelection(brand.id);
-                        }}
-                      />
-                      <span className="text-xs text-gray-500">Select</span>
-                    </div>
-                    
-                    <div className="flex space-x-3">
-                      <button 
-                        className="text-indigo-600 hover:text-indigo-900"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditBrand(brand.id);
-                        }}
-                      >
-                        <PencilLine size={16} />
-                      </button>
-                      <button className="text-red-600 hover:text-red-900">
-                        <Trash2 size={16} />
-                      </button>
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <MoreHorizontal size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-            
-          {filteredBrands.length === 0 && (
+          {isLoading ? (
+            <div className="text-center text-gray-400 py-12">Loading...</div>
+          ) : filteredBrands.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="text-gray-500">
-                No brands found matching your search criteria.
-              </div>
-              <button 
+              <div className="text-gray-500">No brands found.</div>
+              <button
                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
                 onClick={() => router.push('/brands/create')}
               >
                 Add New Brand
               </button>
             </div>
-          )}
-            
-          {filteredBrands.length > 0 && (
-            <div className="bg-white mt-4 px-4 py-3 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 rounded-b-xl sm:px-6">
-              <div className="text-sm text-gray-700 mb-4 sm:mb-0">
-                Showing <span className="font-medium">1</span> to <span className="font-medium">{filteredBrands.length}</span> of{' '}
-                <span className="font-medium">{sampleBrands.length}</span> brands
+          ) : (
+            <>
+              {/* === Desktop Table View === */}
+              <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 text-blue-600"
+                            checked={selectedBrands.length === filteredBrands.length && filteredBrands.length > 0}
+                            onChange={toggleSelectAll}
+                          />
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Brand
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Description
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Created At
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredBrands.map((brand: any) => (
+                        <tr key={brand.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleEditBrand(brand.id)}>
+                          <td className="px-6 py-4" onClick={(e) => { e.stopPropagation(); toggleBrandSelection(brand.id); }}>
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 text-blue-600"
+                              checked={selectedBrands.includes(brand.id)}
+                              onChange={() => {}}
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden">
+                                {brand.logoUrl ? (
+                                  <img src={brand.logoUrl} alt={brand.name} className="h-full w-full object-cover" />
+                                ) : (
+                                  <Box className="text-gray-500" size={20} />
+                                )}
+                              </div>
+                              <div className="ml-4 text-sm font-medium text-gray-900">{brand.name}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{brand.description}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              brand.status === 'active'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {brand.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            {new Date(brand.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-end gap-2">
+                              <button
+                                className="text-indigo-600 hover:text-indigo-900"
+                                onClick={() => handleEditBrand(brand.id)}
+                              >
+                                <PencilLine size={16} />
+                              </button>
+                              <button
+                                className="text-red-600 hover:text-red-900"
+                                onClick={() => handleDeleteBrand(brand.id)}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Previous
-                </button>
-                <button
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+
+                  {/* === Mobile Card View === */}
+                  <div className="md:hidden space-y-4">
+                    {filteredBrands.map((brand: any) => (
+                      <div
+                        key={brand.id}
+                        className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                        onClick={() => handleEditBrand(brand.id)}
+                      >
+                        <div className="p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center">
+                              <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+                                {brand.logoUrl ? (
+                                  <img src={brand.logoUrl} alt={brand.name} className="h-full w-full object-cover" />
+                                ) : (
+                                  <Box className="text-gray-500" size={20} />
+                                )}
+                              </div>
+                              <div className="ml-3 text-sm font-medium text-gray-900">{brand.name}</div>
+                            </div>
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${brand.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                              }`}>
+                              {brand.status === 'active' ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+
+                          <div className="text-sm text-gray-700 mb-3 line-clamp-2">{brand.description}</div>
+
+                          <div className="text-sm text-gray-500 mb-2">
+                            Created: {new Date(brand.createdAt).toLocaleDateString()}
+                          </div>
+
+                          <div
+                            className="flex justify-between items-center pt-3 border-t border-gray-200"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 mr-2"
+                                checked={selectedBrands.includes(brand.id)}
+                                onChange={() => toggleBrandSelection(brand.id)}
+                              />
+                              <span className="text-xs text-gray-500">Select</span>
+                            </div>
+                            <div className="flex space-x-3">
+                              <button
+                                className="text-indigo-600 hover:text-indigo-900"
+                                onClick={() => handleEditBrand(brand.id)}
+                              >
+                                <PencilLine size={16} />
+                              </button>
+                              <button
+                                className="text-red-600 hover:text-red-900"
+                                onClick={() => handleDeleteBrand(brand.id)}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+            </>
           )}
         </div>
       </main>

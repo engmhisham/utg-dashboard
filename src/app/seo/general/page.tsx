@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Cookies from 'js-cookie';
 import Sidebar from '../../../components/Sidebar';
 import { usePathname } from 'next/navigation';
 import { 
@@ -13,23 +14,23 @@ import {
   Chrome,
   UserRoundCog,
   Menu,
-  X
+  X,
+  LucideEye
 } from 'lucide-react';
 import Link from 'next/link';
-  
 
 export default function SEOGeneralPage() {
-    
   const pathname = usePathname();
-  
+
   // Form input states
   const [gtmId, setGtmId] = useState('');
   const [metaPixelId, setMetaPixelId] = useState('');
   const [linkedinPixelId, setLinkedinPixelId] = useState('');
-  
-  // Toggle states
+
+  // Toggle states for enabling/disabling pixels
   const [metaPixelEnabled, setMetaPixelEnabled] = useState(false);
   const [linkedinPixelEnabled, setLinkedinPixelEnabled] = useState(false);
+  // Although these tracking toggles are not sent to the API (per the DTO), they can be used locally.
   const [metaTrackingEnabled, setMetaTrackingEnabled] = useState(false);
   const [linkedinTrackingEnabled, setLinkedinTrackingEnabled] = useState(false);
 
@@ -37,40 +38,108 @@ export default function SEOGeneralPage() {
   const [facebookUrl, setFacebookUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [instagramUrl, setInstagramUrl] = useState('');
-  
+
   // Submission states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveStatus, setSaveStatus] = useState<null | 'success' | 'error'>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Mobile and sidebar toggle state
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Determine mobile view based on window width
   useEffect(() => {
     const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
     checkIfMobile();
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-     
-  const handleSubmit = (e: React.FormEvent) => {
+
+  // Fetch initial SEO settings from your API endpoint
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/seo-general?language=en`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch SEO settings');
+        }
+        const data = await response.json();
+        // Map response properties to state
+        setGtmId(data.gtmId || '');
+        if (data.facebookPixelId) {
+          setMetaPixelId(data.facebookPixelId);
+          setMetaPixelEnabled(true);
+        }
+        if (data.googleAnalyticsId) {
+          setLinkedinPixelId(data.googleAnalyticsId);
+          setLinkedinPixelEnabled(true);
+        }
+        setFacebookUrl(data.facebookUrl || '');
+        setLinkedinUrl(data.linkedinUrl || '');
+        setInstagramUrl(data.instagramUrl || '');
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchSettings();
+  }, []);
+
+  // Handle form submission to update SEO settings
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Simulate API call with basic GTM ID validation
-    setTimeout(() => {
-      const gtmRegex = /^GTM-[A-Z0-9]{1,7}$/;
-      if (gtmId && !gtmRegex.test(gtmId)) {
-        setSaveStatus('error');
-        setIsSubmitting(false);
-        return;
+
+    // Basic validation for GTM ID
+    const gtmRegex = /^GTM-[A-Z0-9]{1,7}$/;
+    if (gtmId && !gtmRegex.test(gtmId)) {
+      setSaveStatus('error');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const token = Cookies.get('accessToken');
+
+    // Build the payload matching your UpdateSeoGeneralDto schema
+    const payload = {
+      gtmId,
+      facebookPixelId: metaPixelEnabled ? metaPixelId : '',
+      googleAnalyticsId: linkedinPixelEnabled ? linkedinPixelId : '',
+      facebookUrl,
+      instagramUrl,
+      linkedinUrl,
+      // Additional fields such as twitterUrl, youtubeUrl, customHeadScripts, and customBodyScripts
+      // can be added here if needed.
+    };
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/seo-general?language=en`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update SEO settings');
       }
-      // Simulate success
+      // Optionally, handle the updated settings returned from your API
+      await res.json();
       setSaveStatus('success');
+    } catch (error) {
+      console.error(error);
+      setSaveStatus('error');
+    } finally {
       setIsSubmitting(false);
       setTimeout(() => setSaveStatus(null), 3000);
-    }, 1000);
+    }
   };
 
+  // Reset the form fields
   const handleReset = () => {
     setGtmId('');
     setMetaPixelId('');
@@ -84,6 +153,15 @@ export default function SEOGeneralPage() {
     setInstagramUrl('');
     setSaveStatus(null);
   };
+
+  // Simple loading indicator while fetching initial settings
+  if (isLoading) {
+    return (
+      <div className="flex h-screen justify-center items-center">
+        <p>Loading SEO Settings...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -108,8 +186,9 @@ export default function SEOGeneralPage() {
                     <ArrowLeft size={20} />
                   </Link>
                   <h1 className="text-xl font-medium ml-2 flex items-center">
-                  <Chrome size={22} className="mr-2" />
-                    SEO Settings</h1>
+                    <Chrome size={22} className="mr-2" />
+                    SEO Settings
+                  </h1>
                 </div>
               </div>
             ) : (
@@ -123,7 +202,7 @@ export default function SEOGeneralPage() {
                     SEO Settings
                   </h1>
                 </div>
-                {/* (Additional desktop actions can be added here if needed) */}
+                {/* Additional desktop actions can be added here if needed */}
               </div>
             )}
           </div>
@@ -146,6 +225,17 @@ export default function SEOGeneralPage() {
                 General
               </Link>
               <Link 
+                href="/seo/view" 
+                className={`px-1 py-2 border-b-2 font-medium flex items-center ${
+                  pathname === '/seo/view' 
+                    ? 'border-blue-500 text-blue-600' 
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <LucideEye size={22} className="mr-2" />
+                General
+              </Link>
+              <Link 
                 href="/seo/pages" 
                 className={`px-1 py-2 border-b-2 font-medium flex items-center ${
                   pathname === '/seo/pages' 
@@ -161,22 +251,7 @@ export default function SEOGeneralPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit}>
-            {saveStatus && (
-              <div className={`mb-4 p-3 rounded-xl flex items-center ${
-                saveStatus === 'success' 
-                  ? 'bg-green-50 text-green-700 border border-green-200' 
-                  : 'bg-red-50 text-red-700 border border-red-200'
-              }`}>
-                {saveStatus === 'success' 
-                  ? <CheckCircle size={16} className="mr-2" /> 
-                  : <AlertCircle size={16} className="mr-2" />
-                }
-                {saveStatus === 'success' 
-                  ? 'Settings saved successfully!' 
-                  : 'There was an error saving your settings. Please check the form and try again.'
-                }
-              </div>
-            )}
+            
             
             {/* Google Tag Manager Section */}
             <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-6">
@@ -216,7 +291,9 @@ export default function SEOGeneralPage() {
               {/* Meta Pixel */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-2">
-                  <label htmlFor="metaPixelId" className="block text-sm font-medium text-gray-700">Meta Pixel</label>
+                  <label htmlFor="metaPixelId" className="block text-sm font-medium text-gray-700">
+                    Meta Pixel
+                  </label>
                   <div className="relative inline-block w-10 mr-2 align-middle select-none">
                     <input 
                       type="checkbox" 
@@ -244,7 +321,9 @@ export default function SEOGeneralPage() {
               {/* LinkedIn Pixel */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label htmlFor="linkedinPixelId" className="block text-sm font-medium text-gray-700">LinkedIn Insight Tag</label>
+                  <label htmlFor="linkedinPixelId" className="block text-sm font-medium text-gray-700">
+                    LinkedIn Insight Tag
+                  </label>
                   <div className="relative inline-block w-10 mr-2 align-middle select-none">
                     <input 
                       type="checkbox" 
@@ -374,28 +453,51 @@ export default function SEOGeneralPage() {
             </div>
 
             {/* Form Actions */}
-            <div className="flex justify-end space-x-4">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-              >
-                <div className="flex items-center">
-                  <RefreshCw size={16} className="mr-2" />
-                  Reset
+            <div className="flex justify-between items-center">
+              {saveStatus ? (
+                <div
+                  className={`p-3 rounded-xl flex items-center ${saveStatus === 'success'
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}
+                >
+                  {saveStatus === 'success' ? (
+                    <CheckCircle size={16} className="mr-2" />
+                  ) : (
+                    <AlertCircle size={16} className="mr-2" />
+                  )}
+                  {saveStatus === 'success'
+                    ? 'Settings saved successfully!'
+                    : 'There was an error saving your settings. Please check the form and try again.'}
                 </div>
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isSubmitting}
-              >
-                <div className="flex items-center">
-                  <Save size={16} className="mr-2" />
-                  {isSubmitting ? 'Saving...' : 'Save Settings'}
-                </div>
-              </button>
+              ) : (
+                // عنصر فارغ للحفاظ على المسافة إذا لم تكن هناك رسالة
+                <div className="w-0" />
+              )}
+              <div className="flex space-x-4">
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                >
+                  <div className="flex items-center">
+                    <RefreshCw size={16} className="mr-2" />
+                    Reset
+                  </div>
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmitting}
+                >
+                  <div className="flex items-center">
+                    <Save size={16} className="mr-2" />
+                    {isSubmitting ? 'Saving...' : 'Save Settings'}
+                  </div>
+                </button>
+              </div>
             </div>
+
           </form>
         </div>
       </main>

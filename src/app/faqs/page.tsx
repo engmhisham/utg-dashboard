@@ -1,489 +1,196 @@
-// app/faqs/page.tsx
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '../../components/Sidebar';
-import { usePathname } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  Search, 
-  Plus, 
-  ChevronDown,
-  ChevronUp,
-  ChevronLeft,
-  PencilLine,
-  Trash2,
-  Filter,
-  Menu,
-  X,
-  MessageCircleQuestion
+import {
+  ArrowLeft, Search, Plus, ChevronDown, ChevronUp,
+  MessageCircleQuestion, Trash2, PencilLine, Menu, X
 } from 'lucide-react';
 import Link from 'next/link';
- 
+import Cookies from 'js-cookie';
+import toast from 'react-hot-toast';
 
-// Sample categories for FAQs
 const categories = [
-  { id: 1, name: 'General' },
-  { id: 2, name: 'Account' },
-  { id: 3, name: 'Billing' },
-  { id: 4, name: 'Technical' },
-  { id: 5, name: 'Services' },
-];
-
-// Sample FAQ data
-const sampleFAQs = [
-  { 
-    id: 1, 
-    question: 'How do I reset my password?', 
-    answer: 'To reset your password, click on the "Forgot Password" link on the login page. You will receive an email with instructions to create a new password.', 
-    category: 'Account',
-    categoryId: 2,
-    published: true,
-  },
-  { 
-    id: 2, 
-    question: 'What payment methods do you accept?', 
-    answer: 'We accept all major credit cards including Visa, Mastercard, and American Express. We also accept PayPal and bank transfers for certain plans.', 
-    category: 'Billing',
-    categoryId: 3,
-    published: true,
-  },
-  { 
-    id: 3, 
-    question: 'How can I cancel my subscription?', 
-    answer: 'You can cancel your subscription at any time by going to your Account Settings and clicking on "Subscriptions". Select the subscription you want to cancel and follow the prompts.', 
-    category: 'Billing',
-    categoryId: 3,
-    published: true,
-  },
-  { 
-    id: 4, 
-    question: 'Is there a free trial available?', 
-    answer: 'Yes, we offer a 14-day free trial for all our paid plans. No credit card is required to start your trial.', 
-    category: 'General',
-    categoryId: 1,
-    published: true,
-  },
-  { 
-    id: 5, 
-    question: 'What browsers are supported?', 
-    answer: 'Our platform supports the latest versions of Chrome, Firefox, Safari, and Edge. We recommend keeping your browser updated for the best experience.', 
-    category: 'Technical',
-    categoryId: 4,
-    published: true,
-  },
-  { 
-    id: 6, 
-    question: 'How do I export my data?', 
-    answer: 'To export your data, go to Account Settings > Data Management > Export. You can choose to export in CSV or Excel format.', 
-    category: 'Technical',
-    categoryId: 4,
-    published: true,
-  },
-  { 
-    id: 7, 
-    question: 'Can I upgrade or downgrade my plan?', 
-    answer: 'Yes, you can change your plan at any time. Go to Account Settings > Subscriptions and select "Change Plan". Any payment adjustments will be prorated for the remainder of your billing cycle.', 
-    category: 'Billing',
-    categoryId: 3,
-    published: false,
-  },
+  { id: 'general', name: 'General' },
+  { id: 'technical', name: 'Technical' },
+  { id: 'services', name: 'Services' },
 ];
 
 export default function FAQsPage() {
-    
-  const pathname = usePathname();
+  const router = useRouter();
+
+  const [faqs, setFaqs] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [showMobileFilter, setShowMobileFilter] = useState(false);
-  const [showPublishedOnly, setShowPublishedOnly] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  // Check if mobile view
+  const [language, setLanguage] = useState<'en' | 'ar'>('en');
+  const [loading, setLoading] = useState(true);
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
   useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    return () => window.removeEventListener('resize', checkIfMobile);
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
-     
-  const toggleFAQ = (id: number) => {
+
+  useEffect(() => {
+    const fetchFAQs = async () => {
+      setLoading(true);
+      try {
+        const token = Cookies.get('accessToken');
+        const params = new URLSearchParams();
+        params.append('language', language);
+        if (selectedCategory) params.append('category', selectedCategory);
+        const res = await fetch(`${API_BASE_URL}/faqs?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const result = await res.json();
+        setFaqs(result.data?.items || []);
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to fetch FAQs.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFAQs();
+  }, [language, selectedCategory]);
+
+  const filteredFAQs = faqs.filter(faq =>
+    faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const toggleFAQ = (id: string) => {
     setExpandedFAQ(expandedFAQ === id ? null : id);
   };
-  
-  // Filter FAQs based on search, category, and publish state
-  const filteredFAQs = sampleFAQs.filter(faq => {
-    const matchesSearch = 
-      faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === null || faq.categoryId === selectedCategory;
-    const matchesPublished = !showPublishedOnly || faq.published;
-    return matchesSearch && matchesCategory && matchesPublished;
-  });
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this FAQ?')) return;
+    const token = Cookies.get('accessToken');
+    try {
+      const res = await fetch(`${API_BASE_URL}/faqs/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      setFaqs(prev => prev.filter(faq => faq.id !== id));
+      toast.success('FAQ deleted');
+    } catch (err) {
+      toast.error('Failed to delete FAQ');
+    }
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Pass sidebar control props */}
       <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-      
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.2s ease-out forwards;
-        }
-      `}</style>
-      
-      <main className="flex-1 flex flex-col overflow-y-auto">
-        {/* {isMobile && (
-          <div className="sticky top-0 z-10">
-            <div className="p-3 border-b border-gray-200 flex justify-between items-center bg-white">
-              <div className="flex items-center">
-                <Link href="/" className="p-1 mr-2">
-                  <ChevronLeft size={20} />
-                </Link>
-                <h1 className="text-xl font-medium">FAQs</h1>
-              </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="p-1 rounded-full bg-white shadow-md border border-gray-200"
-                  aria-label="Toggle sidebar"
-                >
-                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
-                <button 
-                  onClick={() => setShowMobileFilter(!showMobileFilter)} 
-                  className={`p-1 rounded-full ${showMobileFilter ? 'bg-blue-100 text-blue-600' : ''}`}
-                >
-                  <Filter size={18} />
-                </button>
-                <button 
-                  onClick={() => {
-                    setSearchQuery('');
-                    setShowMobileFilter(true);
-                  }} 
-                  className="p-1"
-                >
-                  <Search size={18} />
-                </button>
-              </div>
-            </div>
-            
-            {showMobileFilter && (
-              <div className="p-3 bg-white border-b border-gray-200 animate-fade-in">
-                <div className="relative mb-2">
-                  <input
-                    type="text"
-                    placeholder="Search FAQs..."
-                    className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    autoFocus
-                  />
-                  <Search size={16} className="absolute left-2.5 top-2.5 text-gray-400" />
-                  {searchQuery && (
-                    <button 
-                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                      onClick={() => setSearchQuery('')}
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-                
-                <div className="flex space-x-2 overflow-x-auto py-2">
-                  <button
-                    onClick={() => setSelectedCategory(null)}
-                    className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${selectedCategory === null ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                  >
-                    All
-                  </button>
-                  {categories.map(category => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${selectedCategory === category.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                    >
-                      {category.name}
-                    </button>
-                  ))}
-                </div>
-                
-                <div className="flex items-center mt-2">
-                  <label className="flex items-center cursor-pointer">
-                    <div className="relative">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only" 
-                        checked={showPublishedOnly}
-                        onChange={() => setShowPublishedOnly(!showPublishedOnly)}
-                      />
-                      <div className={`w-10 h-5 ${showPublishedOnly ? 'bg-blue-500' : 'bg-gray-300'} rounded-full shadow-inner transition-colors`}></div>
-                      <div className={`absolute left-0 top-0 w-5 h-5 bg-white rounded-full shadow transform transition-transform ${showPublishedOnly ? 'translate-x-5' : ''}`}></div>
-                    </div>
-                    <div className="ml-3 text-sm">Published only</div>
-                  </label>
-                </div>
-              </div>
-            )}
-          </div>
-        )} */}
-        {/* Mobile Header with Sidebar toggle button positioned before the back button */}
-        {isMobile && (
-          <div className="sticky top-0 z-10">
-            <div className="p-3 border-b border-gray-200 flex justify-between items-center bg-white">
-              {/* Left side: Sidebar toggle, then back button, then title */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="p-1 rounded-full bg-white shadow-md border border-gray-200"
-                  aria-label="Toggle sidebar"
-                >
-                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
-                <Link href="/" className="p-1">
-                  <ChevronLeft size={20} />
-                </Link>
-                <h1 className="text-xl font-medium">FAQs</h1>
-              </div>
-
-              {/* Right side: Filter and Search buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowMobileFilter(!showMobileFilter)}
-                  className={`p-1 rounded-full ${showMobileFilter ? 'bg-blue-100 text-blue-600' : ''}`}
-                >
-                  <Filter size={18} />
-                </button>
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setShowMobileFilter(true);
-                  }}
-                  className="p-1"
-                >
-                  <Search size={18} />
-                </button>
-              </div>
-            </div>
-
-            {showMobileFilter && (
-              <div className="p-3 bg-white border-b border-gray-200 animate-fade-in">
-                <div className="relative mb-2">
-                  <input
-                    type="text"
-                    placeholder="Search FAQs..."
-                    className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    autoFocus
-                  />
-                  <Search size={16} className="absolute left-2.5 top-2.5 text-gray-400" />
-                  {searchQuery && (
-                    <button
-                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                      onClick={() => setSearchQuery('')}
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex space-x-2 overflow-x-auto py-2">
-                  <button
-                    onClick={() => setSelectedCategory(null)}
-                    className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${selectedCategory === null ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                  >
-                    All
-                  </button>
-                  {categories.map(category => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${selectedCategory === category.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                    >
-                      {category.name}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center mt-2">
-                  <label className="flex items-center cursor-pointer">
-                    <div className="relative">
-                      <input
-                        type="checkbox"
-                        className="sr-only"
-                        checked={showPublishedOnly}
-                        onChange={() => setShowPublishedOnly(!showPublishedOnly)}
-                      />
-                      <div className={`w-10 h-5 ${showPublishedOnly ? 'bg-blue-500' : 'bg-gray-300'} rounded-full shadow-inner transition-colors`}></div>
-                      <div className={`absolute left-0 top-0 w-5 h-5 bg-white rounded-full shadow transform transition-transform ${showPublishedOnly ? 'translate-x-5' : ''}`}></div>
-                    </div>
-                    <div className="ml-3 text-sm">Published only</div>
-                  </label>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="p-4 md:p-6 flex-1 flex flex-col">
-          {/* Desktop Header */}
-          <div className="hidden md:flex items-center justify-between mb-6">
-            <div className="flex items-center">
-              <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
-                <ArrowLeft size={20} />
-              </Link>
-              <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-                <MessageCircleQuestion size={22} className="mr-2" />
-                Frequently Asked Questions
-              </h1>
-            </div>
-            <button className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <Plus size={18} className="mr-2" />
-              Add FAQ
-            </button>
-          </div>
-
-          {/* Desktop Filters */}
-          <div className="hidden md:flex flex-wrap justify-between items-center gap-4 bg-white rounded-xl p-4 border border-gray-200 mb-6">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium">Category:</span>
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className={`px-3 py-1 rounded-full text-sm ${selectedCategory === null ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-              >
-                All
+      <main className="flex-1 overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200 p-4 md:p-6 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            {isMobile && (
+              <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 bg-white rounded-full border shadow-sm">
+                {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
-              {categories.map(category => (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`px-3 py-1 rounded-full text-sm ${selectedCategory === category.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                >
-                  {category.name}
-                </button>
-              ))}
+            )}
+            <Link href="/" className="text-gray-500 hover:text-gray-700">
+              <ArrowLeft size={20} />
+            </Link>
+            <h1 className="text-xl md:text-2xl font-semibold flex items-center ml-2">
+              <MessageCircleQuestion className="mr-2" size={22} />
+              FAQs
+            </h1>
+          </div>
+          <button
+            onClick={() => router.push('/faqs/create')}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+          >
+            <Plus size={18} className="mr-2" />
+            Add FAQ
+          </button>
+        </div>
+
+        <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
+          {/* Search & Filters */}
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
+            <div className="relative w-full md:w-1/3">
+              <input
+                type="text"
+                placeholder="Search FAQs..."
+                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
             </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search FAQs..."
-                  className="pl-8 pr-4 py-1.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-60"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <Search size={16} className="absolute left-2.5 top-2 text-gray-400" />
-                {searchQuery && (
-                  <button 
-                    className="absolute right-3 top-2 text-gray-400 hover:text-gray-600"
-                    onClick={() => setSearchQuery('')}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-              
-              <label className="flex items-center cursor-pointer">
-                <div className="relative">
-                  <input 
-                    type="checkbox" 
-                    className="sr-only" 
-                    checked={showPublishedOnly}
-                    onChange={() => setShowPublishedOnly(!showPublishedOnly)}
-                  />
-                  <div className={`w-10 h-5 ${showPublishedOnly ? 'bg-blue-500' : 'bg-gray-300'} rounded-full shadow-inner transition-colors`}></div>
-                  <div className={`absolute left-0 top-0 w-5 h-5 bg-white rounded-full shadow transform transition-transform ${showPublishedOnly ? 'translate-x-5' : ''}`}></div>
-                </div>
-                <div className="ml-3 text-sm">Published only</div>
-              </label>
-            </div>
+          </div>
+
+          {/* Categories */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`px-3 py-1 rounded-full text-sm ${selectedCategory === null ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              All Categories
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3 py-1 rounded-full text-sm ${selectedCategory === cat.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+              >
+                {cat.name}
+              </button>
+            ))}
           </div>
 
           {/* FAQ List */}
-          <div className="space-y-4 flex-1">
-            {filteredFAQs.length > 0 ? (
-              filteredFAQs.map((faq) => (
+          <div className="space-y-4">
+            {loading ? (
+              <p className="text-gray-400 text-center">Loading FAQs...</p>
+            ) : filteredFAQs.length > 0 ? (
+              filteredFAQs.map(faq => (
                 <div key={faq.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                  <div 
+                  <div
                     className="flex justify-between items-center p-4 cursor-pointer"
                     onClick={() => toggleFAQ(faq.id)}
                   >
                     <div className="flex-1">
                       <div className="flex items-center">
-                        <span 
-                          className={`inline-block w-2 h-2 rounded-full mr-2 ${faq.published ? 'bg-green-500' : 'bg-gray-400'}`}
-                          title={faq.published ? 'Published' : 'Draft'}
-                        ></span>
-                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                          {faq.category}
-                        </span>
+                        <span className={`inline-block w-2 h-2 rounded-full mr-2 ${faq.status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{faq.category}</span>
                       </div>
                       <h3 className="font-medium text-gray-900 mt-1">{faq.question}</h3>
                     </div>
-                    <div className="flex items-center ml-2">
-                      {!isMobile && (
-                        <>
-                          <button className="p-1 text-gray-400 hover:text-indigo-600" title="Edit">
-                            <PencilLine size={16} />
-                          </button>
-                          <button className="p-1 text-gray-400 hover:text-red-600 ml-1" title="Delete">
-                            <Trash2 size={16} />
-                          </button>
-                        </>
+                    <div className="flex items-center gap-2">
+                      <button onClick={(e) => { e.stopPropagation(); router.push(`/faqs/edit/${faq.id}`); }} className="text-gray-400 hover:text-indigo-600">
+                        <PencilLine size={16} />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(faq.id); }} className="text-gray-400 hover:text-red-600">
+                        <Trash2 size={16} />
+                      </button>
+                      {expandedFAQ === faq.id ? (
+                        <ChevronUp size={20} className="text-gray-500" />
+                      ) : (
+                        <ChevronDown size={20} className="text-gray-500" />
                       )}
-                      <div className="ml-2">
-                        {expandedFAQ === faq.id ? (
-                          <ChevronUp size={20} className="text-gray-500" />
-                        ) : (
-                          <ChevronDown size={20} className="text-gray-500" />
-                        )}
-                      </div>
                     </div>
                   </div>
-                  
                   {expandedFAQ === faq.id && (
-                    <div className="p-4 pt-0 animate-fade-in">
-                      <p className="text-gray-600">{faq.answer}</p>
-                      {isMobile && (
-                        <div className="flex justify-end mt-4 space-x-2">
-                          <button className="p-2 text-indigo-600 border border-indigo-200 rounded-lg">
-                            <PencilLine size={16} />
-                          </button>
-                          <button className="p-2 text-red-600 border border-red-200 rounded-lg">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    <div className="p-4 pt-0 text-gray-600">{faq.answer}</div>
                   )}
                 </div>
               ))
             ) : (
               <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-                <div className="text-gray-500">
-                  No FAQs found matching your criteria.
-                </div>
+                <p className="text-gray-500">No FAQs found matching your criteria.</p>
               </div>
             )}
           </div>
-          
-          {/* Mobile Add Button */}
-          {isMobile && (
-            <div className="fixed bottom-4 right-4 z-10">
-              <button className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg">
-                <Plus size={24} />
-              </button>
-            </div>
-          )}
         </div>
       </main>
     </div>

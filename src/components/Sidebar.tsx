@@ -144,13 +144,13 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
               )}
             </div>
 
-            <NavItem icon={<Mails size={16} />} text="Emails" badge="164" href="/emails" active={isPathActive('/emails')} className="w-48 m-auto text-sm" />
+            <NavItem icon={<Mails size={16} />} text="Emails"href="/emails" active={isPathActive('/emails')} className="w-48 m-auto text-sm" />
             <NavItem icon={<UsersRound size={16} />} text="Clients" href="/clients" active={isPathActive('/clients')} className="w-48 m-auto text-sm" />
             <NavItem icon={<UsersRound size={16} />} text="Team" badge="New" href="/team" active={isPathActive('/team')} className="w-48 m-auto text-sm" />
             <NavItem icon={<BookCopy size={16} />} text="Testimonials" href="/testimonials" active={isPathActive('/testimonials')} className="w-48 m-auto text-sm" />
-            <NavItem icon={<Box size={16} />} text="Brands" badge="164" href="/brands" active={isPathActive('/brands')} className="w-48 m-auto text-sm" />
+            <NavItem icon={<Box size={16} />} text="Brands"href="/brands" active={isPathActive('/brands')} className="w-48 m-auto text-sm" />
             <NavItem icon={<BookUser size={16} />} text="Contact" href="/contact" active={isPathActive('/contact')} className="w-48 m-auto text-sm" />
-            <NavItem icon={<MessageCircleQuestion size={16} />} text="FAQs" badge="17" href="/faqs" active={isPathActive('/faqs')} className="w-48 m-auto text-sm" />
+            <NavItem icon={<MessageCircleQuestion size={16} />} text="FAQs" href="/faqs" active={isPathActive('/faqs')} className="w-48 m-auto text-sm" />
           </ul>
         </nav>
 

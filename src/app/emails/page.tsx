@@ -208,7 +208,7 @@ export default function EmailsPage() {
       <main className="flex-1 flex flex-col overflow-y-auto">
         {/* Sticky Header (Full width, no container padding) */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
-          <div className="p-3 md:p-6">
+          <div className="p-4 md:p-6">
             {isMobile ? (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -255,10 +255,6 @@ export default function EmailsPage() {
                     Emails
                   </h1>
                 </div>
-                <button className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto">
-                  <Plus size={18} className="mr-2" />
-                  Compose
-                </button>
               </div>
             )}
           </div>
@@ -387,13 +383,6 @@ export default function EmailsPage() {
                 {/* Dropdown options could be added here */}
               </div>
             </div>
-          </div>
-
-          {/* Mobile Compose Button */}
-          <div className="fixed bottom-4 right-4 z-20 md:hidden">
-            <button className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg">
-              <Plus size={24} />
-            </button>
           </div>
 
           {/* Email List */}

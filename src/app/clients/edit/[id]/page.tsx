@@ -1,125 +1,168 @@
 'use client';
+
 import { useState, useEffect } from 'react';
 import Sidebar from '../../../../components/Sidebar';
-import { usePathname, useRouter } from 'next/navigation';
-import { ArrowLeft, Check, X, Upload, Image as ImageIcon, ChevronDown, RefreshCw, Trash, UsersRound, Menu } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  Check,
+  Upload,
+  X,
+  Trash,
+  UsersRound,
+  Menu,
+  Image as ImageIcon,
+} from 'lucide-react';
 import Link from 'next/link';
-  
-
-// Sample clients data (for demonstration purposes)
-const sampleClients = [
-  { 
-    id: '1', 
-    title: 'Acme Corporation',
-    description: 'Leading provider of innovative solutions.',
-    status: 'active',
-    logo: '/logos/acme-logo.svg',
-    url: 'https://www.acme.com'
-  },
-  { 
-    id: '2', 
-    title: 'Globex Inc.',
-    description: 'Global business solutions and services.',
-    status: 'active',
-    logo: '/logos/globex-logo.svg',
-    url: 'https://www.globex.com'
-  },
-  { 
-    id: '3', 
-    title: 'Innotech',
-    description: 'Cutting edge technology and research.',
-    status: 'active',
-    logo: '/logos/innotech-logo.svg',
-    url: 'https://www.innotech.com'
-  },
-  { 
-    id: '4', 
-    title: 'Umbrella Corp.',
-    description: 'Pharmaceutical and research innovations.',
-    status: 'inactive',
-    logo: '/logos/umbrella-logo.svg',
-    url: 'https://www.umbrella.com'
-  },
-  { 
-    id: '5', 
-    title: 'Soylent Corp.',
-    description: 'Revolutionizing the food industry.',
-    status: 'inactive',
-    logo: '/logos/soylent-logo.svg',
-    url: 'https://www.soylent.com'
-  }
-];
+import Cookies from 'js-cookie';
+import toast from 'react-hot-toast';
 
 export default function ClientEditPage({ params }: { params: { id: string } }) {
-    
   const router = useRouter();
-  const pathname = usePathname();
-  
-  // Find the client by id or fallback to the first one
-  const client = sampleClients.find(c => c.id === params.id) || sampleClients[0];
-  
-  // Form state for client details
-  const [formData, setFormData] = useState({
-    title: client.title,
-    description: client.description,
-    status: client.status,
-    logo: client.logo,
-    url: client.url
-  });
-  
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Form submitted:', formData);
-    router.push('/clients');
-  };
-  
-  const handleCancel = () => {
-    router.push('/clients');
-  };
+  const clientId = params.id;
 
-  // For mobile view and sidebar toggle
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    status: 'active',
+    logo: '',
+    url: '',
+  });
+
+  const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Mobile check
   useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
     checkIfMobile();
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-     
+
+  // Fetch client data
+  useEffect(() => {
+    const fetchClient = async () => {
+      const token = Cookies.get('accessToken');
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients/${clientId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Failed to fetch client');
+
+        const data = await res.json();
+        const client = data.data;
+
+        setFormData({
+          title: client.title,
+          description: client.description,
+          status: client.status,
+          logo: client.logoUrl,
+          url: client.url,
+        });
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to load client data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClient();
+  }, [clientId]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = Cookies.get('accessToken');
+
+    const payload = {
+      title_en: formData.title,
+      description_en: formData.description,
+      url_en: formData.url,
+      title_ar: formData.title,
+      description_ar: formData.description,
+      url_ar: formData.url,
+      status: formData.status,
+      logoUrl: formData.logo,
+    };
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients/${clientId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error('Failed to update client');
+
+      toast.success('Client updated successfully ✅');
+      router.push('/clients');
+    } catch (err) {
+      console.error(err);
+      toast.error('Update failed ❌');
+    }
+  };
+
+  const handleCancel = () => router.push('/clients');
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const token = Cookies.get('accessToken');
+    const uploadForm = new FormData();
+    uploadForm.append('file', file);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: uploadForm,
+      });
+
+      const data = await response.json();
+      setFormData(prev => ({
+        ...prev,
+        logo: `${process.env.NEXT_PUBLIC_UPLOAD_BASE}${data.data.url}`,
+      }));
+    } catch (err) {
+      console.error('Upload failed:', err);
+      toast.error('Failed to upload logo');
+    }
+  };
+
+  if (loading) {
+    return <div className="p-8 text-gray-500">Loading client data...</div>;
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
       <main className="flex-1 overflow-y-auto relative">
-        {/* Sticky Header (full width, no horizontal padding) */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
           <div className="p-4 md:p-6">
             {isMobile ? (
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="p-1 rounded-full bg-white shadow-md border border-gray-200"
-                  aria-label="Toggle sidebar"
-                >
+                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 rounded-full bg-white shadow-md border border-gray-200">
                   {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
                 <Link href="/clients" className="text-gray-500 hover:text-gray-700">
                   <ArrowLeft size={20} />
                 </Link>
                 <h1 className="text-xl font-medium ml-2 flex items-center">
-                <UsersRound size={22} className="mr-2" />
-                  Editing Client</h1>
+                  <UsersRound size={22} className="mr-2" />
+                  Edit Client
+                </h1>
               </div>
             ) : (
               <div className="flex items-center justify-between">
@@ -129,20 +172,14 @@ export default function ClientEditPage({ params }: { params: { id: string } }) {
                   </Link>
                   <h1 className="text-xl md:text-2xl font-semibold flex items-center">
                     <UsersRound size={22} className="mr-2" />
-                    Editing Client
+                    Edit Client
                   </h1>
                 </div>
                 <div className="flex space-x-3">
-                  <button
-                    onClick={handleCancel}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50"
-                  >
+                  <button onClick={handleCancel} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50">
                     Cancel
                   </button>
-                  <button
-                    onClick={handleSubmit}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-                  >
+                  <button onClick={handleSubmit} className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
                     Save
                   </button>
                 </div>
@@ -150,54 +187,34 @@ export default function ClientEditPage({ params }: { params: { id: string } }) {
             )}
           </div>
         </div>
-        
-        {/* Main Content Container */}
+
         <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
-          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+
             {/* Status Section */}
             <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
               <h2 className="text-lg font-medium mb-4">Status</h2>
               <div className="flex items-center space-x-4">
-                <label className="inline-flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="active"
-                    checked={formData.status === 'active'}
-                    onChange={handleInputChange}
-                    className="sr-only"
-                  />
-                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                    formData.status === 'active'
-                      ? 'border-blue-500 bg-blue-500'
-                      : 'border-gray-300'
-                  }`}>
-                    {formData.status === 'active' && (
-                      <Check size={12} className="text-white" />
-                    )}
-                  </div>
-                  <span className="ml-2">Active</span>
-                </label>
-                <label className="inline-flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="inactive"
-                    checked={formData.status === 'inactive'}
-                    onChange={handleInputChange}
-                    className="sr-only"
-                  />
-                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                    formData.status === 'inactive'
-                      ? 'border-blue-500 bg-blue-500'
-                      : 'border-gray-300'
-                  }`}>
-                    {formData.status === 'inactive' && (
-                      <Check size={12} className="text-white" />
-                    )}
-                  </div>
-                  <span className="ml-2">Inactive</span>
-                </label>
+                {['active', 'inactive'].map(status => (
+                  <label key={status} className="inline-flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="status"
+                      value={status}
+                      checked={formData.status === status}
+                      onChange={handleInputChange}
+                      className="sr-only"
+                    />
+                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                      formData.status === status ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                    }`}>
+                      {formData.status === status && (
+                        <Check size={12} className="text-white" />
+                      )}
+                    </div>
+                    <span className="ml-2 capitalize">{status}</span>
+                  </label>
+                ))}
               </div>
             </div>
 
@@ -209,22 +226,13 @@ export default function ClientEditPage({ params }: { params: { id: string } }) {
               <div className="border rounded-lg p-4 bg-gray-50 relative">
                 {formData.logo ? (
                   <div className="relative">
-                    <img 
-                      src={formData.logo} 
-                      alt="Client Logo" 
-                      className="max-w-full h-auto max-h-64 mx-auto"
-                    />
+                    <img src={formData.logo} alt="Client Logo" className="max-w-full h-auto max-h-64 mx-auto" />
                     <div className="absolute top-2 right-2 flex space-x-2">
-                      <button 
-                        type="button"
-                        className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md"
-                      >
+                      <label className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md cursor-pointer">
                         <Upload size={16} className="text-gray-600" />
-                      </button>
-                      <button 
-                        type="button"
-                        className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md"
-                      >
+                        <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                      </label>
+                      <button type="button" onClick={() => setFormData(prev => ({ ...prev, logo: '' }))} className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md">
                         <X size={16} className="text-gray-600" />
                       </button>
                     </div>
@@ -237,13 +245,11 @@ export default function ClientEditPage({ params }: { params: { id: string } }) {
                     <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                       <ImageIcon size={32} className="text-gray-400" />
                     </div>
-                    <p className="text-gray-500 mb-4 text-center">Drag & drop your logo here, or click to browse</p>
-                    <button 
-                      type="button"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
+                    <p className="text-gray-500 mb-4 text-center">Upload a logo</p>
+                    <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
                       Upload Logo
-                    </button>
+                      <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                    </label>
                   </div>
                 )}
               </div>
@@ -263,20 +269,16 @@ export default function ClientEditPage({ params }: { params: { id: string } }) {
                     value={formData.title}
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter client title"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter client description"
                     rows={4}
                   />
                 </div>
@@ -297,52 +299,20 @@ export default function ClientEditPage({ params }: { params: { id: string } }) {
               </div>
             </div>
 
-            {/* Delete and Actions Section */}
-            <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
-              <h2 className="text-lg font-medium mb-4">Actions</h2>
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 w-full"
-                >
-                  <RefreshCw size={16} className="mr-2" />
-                  Reset to Original
-                </button>
-                <button
-                  type="button"
-                  className="flex items-center justify-center px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 w-full"
-                  onClick={() => {
-                    if (confirm('Are you sure you want to delete this client?')) {
-                      router.push('/clients');
-                    }
-                  }}
-                >
-                  <Trash size={16} className="mr-2" />
-                  Delete Client
-                </button>
-              </div>
-            </div>
-
             {/* Mobile Submit Buttons */}
             <div className="md:hidden">
               <div className="fixed p-4 bg-white border-t border-gray-200 bottom-0 left-0 w-full">
                 <div className="flex space-x-3">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50"
-                  >
+                  <button type="button" onClick={handleCancel} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50">
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-                  >
+                  <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
                     Save
                   </button>
                 </div>
               </div>
             </div>
+
           </form>
         </div>
       </main>

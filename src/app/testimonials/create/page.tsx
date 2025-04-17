@@ -2,201 +2,244 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../../components/Sidebar';
 import { useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   Check,
   X,
   Upload,
   Image as ImageIcon,
   ChevronDown,
-  Plus,
   Menu,
-  BookCopy
+  BookCopy,
 } from 'lucide-react';
 import Link from 'next/link';
-  
+import Cookies from 'js-cookie';
+import toast from 'react-hot-toast';
 
 export default function TestimonialCreatePage() {
-    
   const router = useRouter();
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-  // State for form fields
   const [formData, setFormData] = useState({
-    title: '',
-    subTitle: '',
-    content: '',
+    name_en: '',
+    position_en: '',
+    company_en: '',
+    content_en: '',
+    name_ar: '',
+    position_ar: '',
+    company_ar: '',
+    content_ar: '',
     status: 'draft',
-    company: '',
-    avatar: '',
-    logo: ''
+    logoUrl: '',
+    coverImageUrl: '',
   });
 
-  // Mobile and sidebar states
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
   useEffect(() => {
     const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
     checkIfMobile();
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-     
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: 'logoUrl' | 'coverImageUrl'
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // Simulate upload (replace with real upload API)
+      const fakeUrl = URL.createObjectURL(file); // Replace with actual uploaded URL
+      setFormData((prev) => ({ ...prev, [field]: fakeUrl }));
+
+      toast.success(`${field === 'logoUrl' ? 'Logo' : 'Avatar'} uploaded`);
+    } catch (err) {
+      toast.error('Upload failed');
+      console.error(err);
+    }
+  };
+
+  const handleImageRemove = (field: 'logoUrl' | 'coverImageUrl') => {
+    setFormData((prev) => ({ ...prev, [field]: '' }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form data submitted:', formData);
-    router.push('/testimonials');
+    try {
+      const token = Cookies.get('accessToken');
+
+      const res = await fetch(`${API_BASE_URL}/testimonials`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) throw new Error('Failed to create testimonial');
+      toast.success('Testimonial created successfully ✅');
+      router.push('/testimonials');
+    } catch (err) {
+      toast.error('Something went wrong ❌');
+      console.error(err);
+    }
   };
 
-  const handleCancel = () => {
-    router.push('/testimonials');
-  };
+  const handleCancel = () => router.push('/testimonials');
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-      <main className="flex-1 overflow-y-auto relative">
-        {/* Full-width Sticky Header */}
+      <main className="flex-1 overflow-y-auto">
+        {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
-          <div className="p-4 md:p-6">
-            {isMobile ? (
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className="p-1 rounded-full bg-white shadow-md border border-gray-200"
-                    aria-label="Toggle sidebar"
-                  >
-                    {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-                  </button>
-                  <Link href="/testimonials" className="p-1">
-                    <ArrowLeft size={20} />
-                  </Link>
-                  <h1 className="text-xl font-medium ml-2 flex items-center">
-                  <BookCopy size={22} className="mr-2" />
-                    Create New Testimonial</h1>
-                </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Link href="/testimonials" className="text-gray-500 hover:text-gray-700 mr-2">
-                    <ArrowLeft size={20} />
-                  </Link>
-                  <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-                    <BookCopy size={22} className="mr-2" />
-                    Create New Testimonial
-                  </h1>
-                </div>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={handleCancel}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmit}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            )}
+          <div className="p-4 md:p-6 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              {isMobile && (
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                >
+                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+              )}
+              <Link href="/testimonials" className="text-gray-500 hover:text-gray-700">
+                <ArrowLeft size={20} />
+              </Link>
+              <h1 className="text-xl md:text-2xl font-semibold flex items-center ml-2">
+                <BookCopy size={22} className="mr-2" />
+                Create New Testimonial
+              </h1>
+            </div>
+            <div className="hidden md:flex gap-3">
+              <button
+                onClick={handleCancel}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+              >
+                Save
+              </button>
+            </div>
           </div>
         </div>
-      
-        {/* Main Content Container */}
-        <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
-          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-            {/* Status Section */}
-            <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
+
+        {/* Form */}
+        <div className="mx-auto max-w-4xl px-4 pb-24">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Status */}
+            <div className="bg-white p-6 rounded-xl border">
               <h2 className="text-lg font-medium mb-4">Status</h2>
-              <div className="flex items-center space-x-4">
-                <label className="inline-flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="published"
-                    checked={formData.status === 'published'}
-                    onChange={handleInputChange}
-                    className="sr-only"
-                  />
-                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                    formData.status === 'published'
-                      ? 'border-blue-500 bg-blue-500'
-                      : 'border-gray-300'
-                  }`}>
-                    {formData.status === 'published' && <Check size={12} className="text-white" />}
-                  </div>
-                  <span className="ml-2">Published</span>
-                </label>
-                <label className="inline-flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="draft"
-                    checked={formData.status === 'draft'}
-                    onChange={handleInputChange}
-                    className="sr-only"
-                  />
-                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                    formData.status === 'draft'
-                      ? 'border-blue-500 bg-blue-500'
-                      : 'border-gray-300'
-                  }`}>
-                    {formData.status === 'draft' && <Check size={12} className="text-white" />}
-                  </div>
-                  <span className="ml-2">Draft</span>
-                </label>
+              <div className="flex gap-6">
+                {['published', 'draft'].map((status) => (
+                  <label key={status} className="inline-flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="status"
+                      value={status}
+                      checked={formData.status === status}
+                      onChange={handleInputChange}
+                      className="sr-only"
+                    />
+                    <div
+                      className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                        formData.status === status ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                      }`}
+                    >
+                      {formData.status === status && <Check size={12} className="text-white" />}
+                    </div>
+                    <span className="ml-2 capitalize">{status}</span>
+                  </label>
+                ))}
               </div>
             </div>
 
-            {/* Translations Section */}
-            <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
-              <h2 className="text-lg font-medium mb-4">Translations <span className="text-blue-500">*</span></h2>
-              <div className="relative">
-                <div className="flex items-center justify-between border rounded-lg p-3 bg-gray-50">
-                  <div className="flex items-center">
-                    <span className="font-medium">en-US</span>
-                  </div>
-                  <ChevronDown size={16} className="text-gray-400" />
+            {/* English / Arabic Inputs */}
+            {['en', 'ar'].map((lang) => (
+              <div key={lang} className="bg-white p-6 rounded-xl border">
+                <h2 className="text-lg font-medium mb-4">{lang === 'en' ? 'English' : 'Arabic'} Content</h2>
+                <div className="space-y-4">
+                  <input
+                    name={`name_${lang}`}
+                    value={formData[`name_${lang}` as keyof typeof formData]}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    placeholder={`Name (${lang})`}
+                    required
+                  />
+                  <input
+                    name={`position_${lang}`}
+                    value={formData[`position_${lang}` as keyof typeof formData]}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    placeholder={`Position (${lang})`}
+                    required
+                  />
+                  <input
+                    name={`company_${lang}`}
+                    value={formData[`company_${lang}` as keyof typeof formData]}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    placeholder={`Company (${lang})`}
+                    required
+                  />
+                  <textarea
+                    name={`content_${lang}`}
+                    value={formData[`content_${lang}` as keyof typeof formData]}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    placeholder={`Content (${lang})`}
+                    required
+                    rows={4}
+                  />
                 </div>
               </div>
-            </div>
+            ))}
 
-            {/* Logo Section */}
-            <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium">Logo <span className="text-gray-400 text-sm ml-1">en-US</span></h2>
-              </div>
-              <div className="border rounded-lg p-4 bg-gray-50 relative">
-                {formData.logo ? (
-                  <div className="relative">
-                    <img 
-                      src={formData.logo} 
-                      alt="Company Logo" 
+            {/* Logo Upload */}
+            <div className="bg-white p-6 rounded-xl border">
+              <h2 className="text-lg font-medium mb-4">Company Logo</h2>
+              <div className="relative bg-gray-50 border rounded-lg p-4 text-center">
+                {formData.logoUrl ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={formData.logoUrl}
+                      alt="Logo"
                       className="max-w-full h-auto max-h-64 mx-auto"
                     />
-                    <div className="absolute top-2 right-2 flex space-x-2">
-                      <button 
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <label className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md cursor-pointer">
+                        <Upload size={16} />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleFileUpload(e, 'logoUrl')}
+                        />
+                      </label>
+                      <button
                         type="button"
                         className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md"
+                        onClick={() => handleImageRemove('logoUrl')}
                       >
-                        <Upload size={16} className="text-gray-600" />
+                        <X size={16} />
                       </button>
-                      <button 
-                        type="button"
-                        className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md"
-                      >
-                        <X size={16} className="text-gray-600" />
-                      </button>
-                    </div>
-                    <div className="absolute bottom-4 left-4 bg-white bg-opacity-80 px-2 py-1 rounded text-sm">
-                      {formData.company} Logo
                     </div>
                   </div>
                 ) : (
@@ -204,60 +247,51 @@ export default function TestimonialCreatePage() {
                     <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                       <ImageIcon size={32} className="text-gray-400" />
                     </div>
-                    <p className="text-gray-500 mb-4 text-center">Drag &amp; drop your logo here, or click to browse</p>
-                    <button 
-                      type="button"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
+                    <p className="text-gray-500 mb-4 text-center">
+                      Drag & drop your logo here, or click to browse
+                    </p>
+                    <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
                       Upload Logo
-                    </button>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, 'logoUrl')}
+                      />
+                    </label>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Content Section */}
-            <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
-              <h2 className="text-lg font-medium mb-4">Content <span className="text-gray-400 text-sm ml-1">en-US</span></h2>
-              <textarea
-                name="content"
-                value={formData.content}
-                onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-32"
-                rows={6}
-                placeholder="Enter testimonial content..."
-              ></textarea>
-            </div>
-
-            {/* Avatar Section */}
-            <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium">Avatar <span className="text-gray-400 text-sm ml-1">en-US</span></h2>
-              </div>
-              <div className="border rounded-lg p-4 bg-gray-50 relative">
-                {formData.avatar ? (
-                  <div className="relative">
-                    <img 
-                      src={formData.avatar} 
-                      alt="Person Avatar" 
+            {/* Avatar Upload */}
+            <div className="bg-white p-6 rounded-xl border">
+              <h2 className="text-lg font-medium mb-4">Person Avatar</h2>
+              <div className="relative bg-gray-50 border rounded-lg p-4 text-center">
+                {formData.coverImageUrl ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={formData.coverImageUrl}
+                      alt="Avatar"
                       className="max-w-full h-auto max-h-64 mx-auto"
                     />
-                    <div className="absolute top-2 right-2 flex space-x-2">
-                      <button 
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <label className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md cursor-pointer">
+                        <Upload size={16} />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleFileUpload(e, 'coverImageUrl')}
+                        />
+                      </label>
+                      <button
                         type="button"
                         className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md"
+                        onClick={() => handleImageRemove('coverImageUrl')}
                       >
-                        <Upload size={16} className="text-gray-600" />
+                        <X size={16} />
                       </button>
-                      <button 
-                        type="button"
-                        className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md"
-                      >
-                        <X size={16} className="text-gray-600" />
-                      </button>
-                    </div>
-                    <div className="absolute bottom-4 left-4 bg-white bg-opacity-80 px-2 py-1 rounded text-sm">
-                      Person
                     </div>
                   </div>
                 ) : (
@@ -265,84 +299,20 @@ export default function TestimonialCreatePage() {
                     <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                       <ImageIcon size={32} className="text-gray-400" />
                     </div>
-                    <p className="text-gray-500 mb-4 text-center">Drag &amp; drop the person's photo here, or click to browse</p>
-                    <button 
-                      type="button"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
+                    <p className="text-gray-500 mb-4 text-center">
+                      Drag & drop avatar here, or click to browse
+                    </p>
+                    <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
                       Upload Avatar
-                    </button>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, 'coverImageUrl')}
+                      />
+                    </label>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* Title and Subtitle Section */}
-            <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
-              <h2 className="text-lg font-medium mb-4">Person Info <span className="text-gray-400 text-sm ml-1">en-US</span></h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name <span className="text-blue-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter person's name"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Position <span className="text-blue-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="subTitle"
-                    value={formData.subTitle}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter person's position"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Company
-                  </label>
-                  <input
-                    type="text"
-                    name="company"
-                    value={formData.company}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter company name"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Submit Buttons */}
-            <div className="md:hidden">
-              <div className="fixed p-4 bg-white border-t border-gray-200 bottom-0 left-0 w-full" style={{ left: 0, width: 'inherit', right: 0 }}>
-                <div className="flex space-x-3">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-                  >
-                    Save
-                  </button>
-                </div>
               </div>
             </div>
           </form>

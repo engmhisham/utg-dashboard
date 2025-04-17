@@ -50,19 +50,42 @@ body {
 
 
 
-.toggle-checkbox:checked {
-  right: 0;
-  border-color: #fff;
-}
-.toggle-checkbox:checked + .toggle-label {
-  background-color: #3b82f6;
-}
 .toggle-checkbox {
-  right: 0;
-  z-index: 1;
-  border-color: #e2e8f0;
-  transition: all 0.3s;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1.5rem; /* knob size */
+  height: 1.5rem;
+  border-radius: 9999px;
+  appearance: none;
+  background-color: white;
+  border: 2px solid white;
+  transition: transform 0.3s;
+  cursor: pointer;
 }
+
 .toggle-label {
+  display: block;
+  width: 2.5rem; /* track size */
+  height: 1.5rem;
+  background-color: #e5e7eb;
+  border-radius: 9999px;
   transition: background-color 0.3s;
+}
+
+.toggle-checkbox:checked {
+  transform: translateX(1rem); /* moves knob to the right when checked */
+}
+
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #3b82f6; /* active background */
+}
+
+.toggle-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.toggle-checkbox:disabled + .toggle-label {
+  background-color: #f3f4f6;
 }

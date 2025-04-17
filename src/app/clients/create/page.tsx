@@ -4,7 +4,8 @@ import Sidebar from '../../../components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, UsersRound, Menu, X } from 'lucide-react';
 import Link from 'next/link';
-  
+import Cookies from 'js-cookie';
+import toast from 'react-hot-toast';
 
 export default function ClientCreatePage() {
     
@@ -39,11 +40,69 @@ export default function ClientCreatePage() {
     }));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    router.push('/clients');
+
+    const token = Cookies.get('accessToken');
+  
+    const payload = {
+      status: formData.status,
+      title_en: formData.title,
+      description_en: formData.description,
+      url_en: formData.url,
+      title_ar: formData.title,
+      description_ar: formData.description,
+      url_ar: formData.url,
+      logoUrl: formData.logo || '', // Update later with real upload
+    };
+  
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Failed to create client: ${response.statusText}`);
+      }
+  
+      const data = await response.json();
+      toast.success('Client created successfully ✅');
+      router.push('/clients');
+    } catch (error: any) {
+      console.error('Error:', error);
+      toast.error(error.message || 'Something went wrong ❌');
+    }
   };
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+  
+    const token = Cookies.get('accessToken');
+    const formData = new FormData();
+    formData.append('file', file);
+  
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/upload`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`, // 🔐 Add token
+        },
+        body: formData,
+      });
+  
+      const data = await response.json();
+      console.log('Upload result:', data);
+      setFormData(prev => ({ ...prev, logo: `${process.env.NEXT_PUBLIC_UPLOAD_BASE}${data.data.url}` }));
+    } catch (err) {
+      console.error('Upload failed:', err);
+    }
+  };
+  
   
   const handleCancel = () => {
     router.push('/clients');
@@ -164,12 +223,22 @@ export default function ClientCreatePage() {
                     <span className="text-gray-400">Logo</span>
                   </div>
                   <p className="text-gray-500 mb-4 text-center">Drag & drop your logo here, or click to browse</p>
-                  <button 
-                    type="button"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="logoUpload"
+                  />
+                  <label
+                    htmlFor="logoUpload"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
                   >
                     Upload Logo
-                  </button>
+                  </label>
+                  {formData.logo && (
+                    <img src={formData.logo} alt="Logo preview" className="mt-4 w-24 h-24 object-contain" />
+                  )}
                 </div>
               </div>
             </div>
