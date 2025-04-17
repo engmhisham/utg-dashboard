@@ -18,16 +18,8 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { Client } from '@/src/lib/types';
 
-type Client = {
-  id: string;
-  title: string;
-  description: string;
-  status: 'active' | 'inactive';
-  logoUrl: string;
-  url: string;
-  createdAt?: string; // Optional if not always returned
-};
 
 export default function ClientsPage() {
   const router = useRouter();

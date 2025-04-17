@@ -89,3 +89,16 @@ body {
 .toggle-checkbox:disabled + .toggle-label {
   background-color: #f3f4f6;
 }
+
+.ql-container {
+  min-height: 300px;        
+}
+.rtl .ql-editor {
+  direction: rtl;
+  text-align: right;
+}
+
+/* flip the toolbar too */
+.rtl .ql-toolbar {
+  direction: rtl;
+}

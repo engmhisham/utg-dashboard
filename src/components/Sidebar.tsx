@@ -8,18 +8,29 @@ import { usePathname } from 'next/navigation';
 import Cookies from 'js-cookie';
 import {
   Search, FileText, ShieldUser, BookCopy, LogOut, UsersRound, Mails,
-  MessageCircleQuestion, Chrome, LayoutDashboard, Box, UserRoundCog, BookUser
+  MessageCircleQuestion, Chrome, LayoutDashboard, Box, UserRoundCog, BookUser,
+  Projector,
+  Boxes,
+  Rss,
+  User,
+  Users
 } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
   toggleSidebar: () => void;
 }
+interface StoredUser {
+  id?: string;          // ← make it optional so the code still compiles
+  username?: string;
+  email?: string;
+  role?: string;
+}
 
 const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
-  const [user, setUser] = useState<{ username?: string } | null>(null);
+  const [user, setUser] = useState<StoredUser  | null>(null);
   const pathname = usePathname();
 
   // Redirect if not authenticated
@@ -54,7 +65,12 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
     setActiveSubmenu(activeSubmenu === menu ? null : menu);
   };
 
-  const isPathActive = (path: string) => pathname === path;
+  const isPathActive = (target: string, exact = false) => {
+    if (exact) return pathname === target;
+    return pathname.startsWith(target);
+  };
+  const isProfilePage =
+  pathname.startsWith('/users/') && pathname !== '/users';
 
   // Load user
   useEffect(() => {
@@ -146,21 +162,43 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
 
             <NavItem icon={<Mails size={16} />} text="Emails"href="/emails" active={isPathActive('/emails')} className="w-48 m-auto text-sm" />
             <NavItem icon={<UsersRound size={16} />} text="Clients" href="/clients" active={isPathActive('/clients')} className="w-48 m-auto text-sm" />
-            <NavItem icon={<UsersRound size={16} />} text="Team" badge="New" href="/team" active={isPathActive('/team')} className="w-48 m-auto text-sm" />
+            <NavItem icon={<Boxes size={16} />} text="Projects" badge="New" href="/projects" active={isPathActive('/projects')} className="w-48 m-auto text-sm" />
+            <NavItem icon={<UsersRound size={16} />} text="Team" href="/team" active={isPathActive('/team')} className="w-48 m-auto text-sm" />
             <NavItem icon={<BookCopy size={16} />} text="Testimonials" href="/testimonials" active={isPathActive('/testimonials')} className="w-48 m-auto text-sm" />
             <NavItem icon={<Box size={16} />} text="Brands"href="/brands" active={isPathActive('/brands')} className="w-48 m-auto text-sm" />
+            <NavItem icon={<Rss size={16} />} text="Blogs" badge="New" href="/blogs" active={isPathActive('/blogs')} className="w-48 m-auto text-sm" />
             <NavItem icon={<BookUser size={16} />} text="Contact" href="/contact" active={isPathActive('/contact')} className="w-48 m-auto text-sm" />
             <NavItem icon={<MessageCircleQuestion size={16} />} text="FAQs" href="/faqs" active={isPathActive('/faqs')} className="w-48 m-auto text-sm" />
           </ul>
         </nav>
 
         <div className="mt-auto border-t border-gray-200 pt-0 pb-2 px-4 absolute bottom-0 w-56">
-          <div className="flex items-center gap-2 py-2 px-2 rounded-xl border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer mt-2">
+          {/* <div className="flex items-center gap-2 py-2 px-2 rounded-xl border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer mt-2">
             <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center text-xs">
               <ShieldUser size={16} />
             </div>
             <span className="text-sm">{user?.username ?? 'Ember Crest'}</span>
-          </div>
+          </div> */}
+          <Link
+            href={user?.id ? `/users/view/${user.id}` : '#'}
+            className={`flex items-center gap-2 py-2 px-2 rounded-xl border
+              ${isProfilePage
+                ? 'bg-white border-2 border-gray-300 text-blue-700'
+                : 'border-transparent hover:bg-white hover:border-gray-300'}
+              cursor-pointer mt-2`}
+          >
+            <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center text-xs">
+              <ShieldUser size={16} />
+            </div>
+            <span className="text-sm">{user?.username ?? 'Ember Crest'}</span>
+          </Link>
+          <NavItem
+            icon={<Users size={16} />}
+            text="Users"
+            href="/users"
+            active={isPathActive('/users', true)}
+            className="w-48 m-auto text-sm px-3"
+          />
           <div
             onClick={handleLogout}
             className="flex items-center gap-2 py-2 px-3 rounded-xl border border-transparent hover:bg-white hover:border-2 hover:border-gray-300 cursor-pointer text-red-600"
