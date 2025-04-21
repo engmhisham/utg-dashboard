@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import LoadingSpinner from '@/src/components/LoadingSpinner';
 
 export default function TeamPage() {
   const router = useRouter();
@@ -280,7 +281,11 @@ export default function TeamPage() {
             ))}
           </div>
 
-          {loading && <p className="text-center text-gray-400 mt-8">Loading...</p>}
+          {loading && (
+            <div className="flex justify-center mt-8">
+              <LoadingSpinner className="text-gray-400 h-8 w-8" />
+            </div>
+          )}
 
           {!loading && filteredMembers.length === 0 && (
             <div className="text-center py-12 bg-white rounded-xl border shadow-sm">
