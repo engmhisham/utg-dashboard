@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
+import LoadingSpinner from '@/src/components/LoadingSpinner';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -24,7 +25,7 @@ export default function TestimonialsPage() {
 
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [selectedTestimonials, setSelectedTestimonials] = useState<string[]>([]);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -32,6 +33,7 @@ export default function TestimonialsPage() {
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+  // viewport check
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -39,8 +41,9 @@ export default function TestimonialsPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // fetch testimonials
   useEffect(() => {
-    const fetchTestimonials = async () => {
+    (async () => {
       setLoading(true);
       const token = Cookies.get('accessToken');
       try {
@@ -51,7 +54,7 @@ export default function TestimonialsPage() {
         const res = await fetch(`${API_BASE_URL}/testimonials?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-
+        if (!res.ok) throw new Error('Failed to fetch testimonials');
         const data = await res.json();
         setTestimonials(data.data?.items || []);
       } catch (err) {
@@ -60,70 +63,65 @@ export default function TestimonialsPage() {
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchTestimonials();
+    })();
   }, [statusFilter]);
 
-  const filteredTestimonials = testimonials.filter(t => {
-    const matchesSearch =
-      t.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.position?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.content?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    return matchesSearch;
+  // search & filter
+  const filtered = testimonials.filter(t => {
+    const q = searchQuery.toLowerCase();
+    return (
+      (t.name || '').toLowerCase().includes(q) ||
+      (t.position || '').toLowerCase().includes(q) ||
+      (t.company || '').toLowerCase().includes(q) ||
+      (t.content || '').toLowerCase().includes(q)
+    );
   });
 
-  const toggleSelect = (id: string) => {
-    setSelectedTestimonials(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
-
+  // selection helpers
   const toggleSelectAll = () => {
-    if (selectedTestimonials.length === filteredTestimonials.length) {
+    if (selectedTestimonials.length === filtered.length) {
       setSelectedTestimonials([]);
     } else {
-      setSelectedTestimonials(filteredTestimonials.map(t => t.id));
+      setSelectedTestimonials(filtered.map(t => t.id));
     }
   };
+  const toggleSelect = (id: string) =>
+    setSelectedTestimonials(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
 
-  const handleEdit = (id: string) => {
-    router.push(`/testimonials/edit/${id}`);
-  };
-
+  // actions
+  const handleEdit = (id: string) => router.push(`/testimonials/edit/${id}`);
   const handleDelete = async (id: string) => {
-    const confirmed = confirm('Are you sure you want to delete this testimonial?');
-    if (!confirmed) return;
-
+    if (!confirm('Delete this testimonial?')) return;
     const token = Cookies.get('accessToken');
     try {
       const res = await fetch(`${API_BASE_URL}/testimonials/${id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
-
       if (!res.ok) throw new Error('Delete failed');
       setTestimonials(prev => prev.filter(t => t.id !== id));
       toast.success('Deleted successfully');
-    } catch (err) {
+    } catch {
       toast.error('Failed to delete');
     }
   };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(o => !o)} />
+
       <main className="flex-1 overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
           <div className="p-4 md:p-6 flex justify-between items-center">
             <div className="flex items-center gap-2">
               {isMobile && (
-                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 bg-white rounded-full border shadow-sm">
+                <button
+                  onClick={() => setSidebarOpen(o => !o)}
+                  className="p-1 bg-white rounded-full border shadow-sm"
+                >
                   {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
                 </button>
               )}
@@ -147,14 +145,14 @@ export default function TestimonialsPage() {
 
         {/* Filters */}
         <div className="mx-auto max-w-7xl px-4 pb-6">
-          <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-gray-200 flex flex-col md:flex-row md:justify-between gap-4">
+          <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border flex flex-col md:flex-row md:justify-between gap-4">
             <div className="relative w-full md:w-1/3">
               <input
                 type="text"
                 placeholder="Search testimonials..."
                 className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
               />
               <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
             </div>
@@ -162,7 +160,7 @@ export default function TestimonialsPage() {
               <span className="text-sm text-gray-600">Status:</span>
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={e => setStatusFilter(e.target.value as any)}
                 className="pl-3 pr-8 py-2 border border-gray-300 rounded-lg"
               >
                 <option value="all">All</option>
@@ -172,8 +170,8 @@ export default function TestimonialsPage() {
             </div>
           </div>
 
-          {/* Testimonials Table - Desktop View */}
-          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-white rounded-xl shadow-sm border overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -181,136 +179,188 @@ export default function TestimonialsPage() {
                     <input
                       type="checkbox"
                       className="h-4 w-4 text-blue-600 rounded border-gray-300"
-                      checked={selectedTestimonials.length === filteredTestimonials.length && filteredTestimonials.length > 0}
+                      checked={selectedTestimonials.length === filtered.length && filtered.length > 0}
                       onChange={toggleSelectAll}
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Person</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Person
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Company
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredTestimonials.map(testimonial => (
-                  <tr
-                    key={testimonial.id}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => handleEdit(testimonial.id)}
-                  >
-                    <td className="px-6 py-4 flex justify-center align-middle" onClick={(e) => { e.stopPropagation(); toggleSelect(testimonial.id); }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedTestimonials.includes(testimonial.id)}
-                        onChange={() => { }}
-                        className="h-4 w-4 text-blue-600 rounded border-gray-300"
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
-                          {testimonial.coverImageUrl ? (
-                            <img src={testimonial.coverImageUrl} alt={testimonial.name} className="h-full w-full object-cover" />
-                          ) : (
-                            <Users className="text-gray-500" size={20} />
-                          )}
-                        </div>
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">{testimonial.name}</div>
-                          <div className="text-sm text-gray-500">{testimonial.position}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{testimonial.company}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs font-semibold rounded-full ${testimonial.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                        {testimonial.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(testimonial.createdAt).toLocaleDateString('en-US', {
-                        year: 'numeric', month: 'short', day: 'numeric'
-                      })}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex justify-end space-x-2" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => handleEdit(testimonial.id)} className="text-indigo-600 hover:text-indigo-900">
-                          <PencilLine size={16} />
-                        </button>
-                        <button onClick={() => handleDelete(testimonial.id)} className="text-red-600 hover:text-red-900">
-                          <Trash2 size={16} />
-                        </button>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-8">
+                      <div className="flex justify-center">
+                        <LoadingSpinner className="h-8 w-8 text-gray-400" />
                       </div>
                     </td>
                   </tr>
-                ))}
+                ) : filtered.length > 0 ? (
+                  filtered.map(t => (
+                    <tr
+                      key={t.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleEdit(t.id)}
+                    >
+                      <td
+                        className="px-6 py-4"
+                        onClick={e => {
+                          e.stopPropagation();
+                          toggleSelect(t.id);
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedTestimonials.includes(t.id)}
+                          readOnly
+                          className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+                            {t.coverImageUrl ? (
+                              <img src={t.coverImageUrl} alt={t.name} className="h-full w-full object-cover" />
+                            ) : (
+                              <Users className="text-gray-500" size={20} />
+                            )}
+                          </div>
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-gray-900">{t.name}</div>
+                            <div className="text-sm text-gray-500">{t.position}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">{t.company}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs font-semibold rounded-full ${
+                            t.status === 'published'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
+                          {t.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(t.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </td>
+                      <td
+                        className="px-6 py-4 text-right space-x-2"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() => handleEdit(t.id)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          <PencilLine size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(t.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-gray-500">
+                      No testimonials found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
-          {/* Mobile View */}
+
+          {/* Mobile Cards */}
           <div className="md:hidden space-y-4">
-            {filteredTestimonials.map(testimonial => (
-              <div
-                key={testimonial.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden cursor-pointer"
-                onClick={() => handleEdit(testimonial.id)}
-              >
-                <div className="p-4">
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner className="h-8 w-8 text-gray-400" />
+              </div>
+            ) : filtered.length > 0 ? (
+              filtered.map(t => (
+                <div
+                  key={t.id}
+                  className="bg-white rounded-xl shadow-sm border p-4 cursor-pointer"
+                  onClick={() => handleEdit(t.id)}
+                >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                        {testimonial.coverImageUrl ? (
-                          <img src={testimonial.coverImageUrl} alt={testimonial.name} className="h-full w-full object-cover" />
+                      <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+                        {t.coverImageUrl ? (
+                          <img src={t.coverImageUrl} alt={t.name} className="h-full w-full object-cover" />
                         ) : (
                           <Users className="text-gray-500" size={20} />
                         )}
                       </div>
                       <div className="ml-3">
-                        <div className="text-sm font-medium text-gray-900">{testimonial.name}</div>
-                        <div className="text-sm text-gray-500">{testimonial.position}</div>
+                        <div className="text-sm font-medium text-gray-900">{t.name}</div>
+                        <div className="text-sm text-gray-500">{t.position}</div>
                       </div>
                     </div>
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${testimonial.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                      {testimonial.status === 'published' ? 'Published' : 'Draft'}
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        t.status === 'published'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {t.status}
                     </span>
                   </div>
                   <div className="text-sm text-gray-700 mb-2">
-                    <strong>Company:</strong> {testimonial.company}
+                    <strong>Company:</strong> {t.company}
                   </div>
                   <div className="text-sm text-gray-700 mb-3 line-clamp-2">
-                    {testimonial.content}
+                    {t.content}
                   </div>
-                  <div className="flex justify-end items-center pt-3 border-t border-gray-200 space-x-3">
+                  <div className="flex justify-end space-x-3">
                     <button
                       className="text-indigo-600 hover:text-indigo-900"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(testimonial.id);
-                      }}
+                      onClick={e => { e.stopPropagation(); handleEdit(t.id); }}
                     >
                       <PencilLine size={16} />
                     </button>
                     <button
                       className="text-red-600 hover:text-red-900"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(testimonial.id);
-                      }}
+                      onClick={e => { e.stopPropagation(); handleDelete(t.id); }}
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="text-center py-12 bg-white rounded-xl shadow-sm border">
+                <p className="text-gray-500">No testimonials found.</p>
               </div>
-            ))}
+            )}
           </div>
-
         </div>
       </main>
     </div>
-
   );
 }

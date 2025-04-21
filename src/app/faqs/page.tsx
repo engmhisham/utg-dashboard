@@ -1,10 +1,20 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Sidebar from '../../components/Sidebar';
+import Sidebar from '@/src/components/Sidebar';
+import LoadingSpinner from '@/src/components/LoadingSpinner';
 import {
-  ArrowLeft, Search, Plus, ChevronDown, ChevronUp,
-  MessageCircleQuestion, Trash2, PencilLine, Menu, X
+  ArrowLeft,
+  Search,
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  MessageCircleQuestion,
+  Trash2,
+  PencilLine,
+  Menu,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
@@ -30,6 +40,7 @@ export default function FAQsPage() {
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+  // viewport check
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -37,17 +48,20 @@ export default function FAQsPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // fetch FAQs
   useEffect(() => {
-    const fetchFAQs = async () => {
+    (async () => {
       setLoading(true);
       try {
         const token = Cookies.get('accessToken');
         const params = new URLSearchParams();
         params.append('language', language);
         if (selectedCategory) params.append('category', selectedCategory);
+
         const res = await fetch(`${API_BASE_URL}/faqs?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        if (!res.ok) throw new Error('Failed to fetch FAQs');
         const result = await res.json();
         setFaqs(result.data?.items || []);
       } catch (err) {
@@ -56,8 +70,7 @@ export default function FAQsPage() {
       } finally {
         setLoading(false);
       }
-    };
-    fetchFAQs();
+    })();
   }, [language, selectedCategory]);
 
   const filteredFAQs = faqs.filter(faq =>
@@ -80,20 +93,24 @@ export default function FAQsPage() {
       if (!res.ok) throw new Error();
       setFaqs(prev => prev.filter(faq => faq.id !== id));
       toast.success('FAQ deleted');
-    } catch (err) {
+    } catch {
       toast.error('Failed to delete FAQ');
     }
   };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(o => !o)} />
+
       <main className="flex-1 overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200 p-4 md:p-6 flex justify-between items-center">
           <div className="flex items-center gap-2">
             {isMobile && (
-              <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 bg-white rounded-full border shadow-sm">
+              <button
+                onClick={() => setSidebarOpen(o => !o)}
+                className="p-1 bg-white rounded-full border shadow-sm"
+              >
                 {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
             )}
@@ -123,9 +140,20 @@ export default function FAQsPage() {
                 placeholder="Search FAQs..."
                 className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
               />
               <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600">Lang:</span>
+              <select
+                value={language}
+                onChange={e => setLanguage(e.target.value as any)}
+                className="pl-3 pr-8 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="en">English</option>
+                <option value="ar">Arabic</option>
+              </select>
             </div>
           </div>
 
@@ -133,15 +161,23 @@ export default function FAQsPage() {
           <div className="flex flex-wrap gap-2 mb-6">
             <button
               onClick={() => setSelectedCategory(null)}
-              className={`px-3 py-1 rounded-full text-sm ${selectedCategory === null ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+              className={`px-3 py-1 rounded-full text-sm ${
+                selectedCategory === null
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
             >
               All Categories
             </button>
-            {categories.map((cat) => (
+            {categories.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1 rounded-full text-sm ${selectedCategory === cat.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                className={`px-3 py-1 rounded-full text-sm ${
+                  selectedCategory === cat.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
               >
                 {cat.name}
               </button>
@@ -151,7 +187,9 @@ export default function FAQsPage() {
           {/* FAQ List */}
           <div className="space-y-4">
             {loading ? (
-              <p className="text-gray-400 text-center">Loading FAQs...</p>
+              <div className="flex justify-center py-8">
+                <LoadingSpinner className="h-8 w-8 text-gray-400" />
+              </div>
             ) : filteredFAQs.length > 0 ? (
               filteredFAQs.map(faq => (
                 <div key={faq.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -161,16 +199,34 @@ export default function FAQsPage() {
                   >
                     <div className="flex-1">
                       <div className="flex items-center">
-                        <span className={`inline-block w-2 h-2 rounded-full mr-2 ${faq.status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{faq.category}</span>
+                        <span
+                          className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                            faq.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
+                          }`}
+                        />
+                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                          {faq.category}
+                        </span>
                       </div>
                       <h3 className="font-medium text-gray-900 mt-1">{faq.question}</h3>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button onClick={(e) => { e.stopPropagation(); router.push(`/faqs/edit/${faq.id}`); }} className="text-gray-400 hover:text-indigo-600">
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          router.push(`/faqs/edit/${faq.id}`);
+                        }}
+                        className="text-gray-400 hover:text-indigo-600"
+                      >
                         <PencilLine size={16} />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(faq.id); }} className="text-gray-400 hover:text-red-600">
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleDelete(faq.id);
+                        }}
+                        className="text-gray-400 hover:text-red-600"
+                      >
                         <Trash2 size={16} />
                       </button>
                       {expandedFAQ === faq.id ? (
