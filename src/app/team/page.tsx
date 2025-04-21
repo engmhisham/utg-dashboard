@@ -5,8 +5,15 @@ import { usePathname, useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import Sidebar from '../../components/Sidebar';
 import {
-  ArrowLeft, Search, Plus, ChevronDown, UsersRound,
-  X, Menu, PencilLine, Trash2, Image as ImageIcon
+  ArrowLeft,
+  Search,
+  Plus,
+  UsersRound,
+  X,
+  Menu,
+  PencilLine,
+  Trash2,
+  Image as ImageIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -16,13 +23,13 @@ export default function TeamPage() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [team, setTeam] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [team, setTeam]                     = useState<any[]>([]);
+  const [searchQuery, setSearchQuery]       = useState('');
+  const [statusFilter, setStatusFilter]     = useState('all');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [isMobile, setIsMobile] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile]             = useState(false);
+  const [sidebarOpen, setSidebarOpen]       = useState(false);
+  const [loading, setLoading]               = useState(true);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -34,7 +41,7 @@ export default function TeamPage() {
   }, []);
 
   useEffect(() => {
-    const fetchTeam = async () => {
+    (async () => {
       setLoading(true);
       const token = Cookies.get('accessToken');
       try {
@@ -42,10 +49,10 @@ export default function TeamPage() {
         params.append('language', 'en');
         if (statusFilter !== 'all') params.append('status', statusFilter);
 
-        const res = await fetch(`${API_BASE_URL}/team-members?sortBy=createdAt&sortOrder=DESC`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
+        const res = await fetch(
+          `${API_BASE_URL}/team-members?${params.toString()}&sortBy=createdAt&sortOrder=DESC`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
         const result = await res.json();
         setTeam(result.data?.items || []);
       } catch (error) {
@@ -54,42 +61,22 @@ export default function TeamPage() {
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchTeam();
+    })();
   }, [statusFilter]);
 
   const filteredMembers = team.filter(member => {
-    const matchSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        member.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const q = searchQuery.toLowerCase();
+    const matchSearch =
+      member.name.toLowerCase().includes(q) ||
+      member.title.toLowerCase().includes(q);
     const matchStatus = statusFilter === 'all' || member.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
-  const handleDelete = async (id: string) => {
-    const confirmed = confirm('Are you sure you want to delete this member?');
-    if (!confirmed) return;
-    const token = Cookies.get('accessToken');
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/team/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) throw new Error('Failed to delete team member');
-      setTeam(prev => prev.filter(m => m.id !== id));
-      toast.success('Team member deleted successfully ✅');
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to delete ❌');
-    }
-  };
-
   const toggleSelection = (id: string) => {
-    setSelectedMembers(prev => (
-      prev.includes(id) ? prev.filter(mid => mid !== id) : [...prev, id]
-    ));
+    setSelectedMembers(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
   };
 
   const toggleSelectAll = () => {
@@ -102,66 +89,89 @@ export default function TeamPage() {
 
   const handleEdit = (id: string) => router.push(`/team/edit/${id}`);
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure?')) return;
+    const token = Cookies.get('accessToken');
+    try {
+      const res = await fetch(`${API_BASE_URL}/team/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      setTeam(prev => prev.filter(m => m.id !== id));
+      toast.success('Deleted ✅');
+    } catch {
+      toast.error('Delete failed ❌');
+    }
+  };
+
   const renderStatusBadge = (status: string) => (
-    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+    <span className={`px-2 inline-flex text-xs font-semibold rounded-full ${
       status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
     }`}>
       {status === 'active' ? 'Active' : 'Inactive'}
     </span>
   );
 
-  const renderDate = (date: string) => new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric'
-  });
+  const renderDate = (date: string) =>
+    new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric'
+    });
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        toggleSidebar={() => setSidebarOpen(o => !o)}
+      />
       <main className="flex-1 overflow-y-auto">
-        {/* Header */}
+
+        {/* Top Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
           <div className="p-4 md:p-6 flex justify-between items-center">
             <div className="flex items-center gap-2">
               {isMobile && (
-                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 bg-white rounded-full border shadow-sm">
-                  {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                <button
+                  onClick={() => setSidebarOpen(o => !o)}
+                  className="p-1 bg-white rounded-full border shadow-sm"
+                >
+                  {sidebarOpen ? <X size={20}/> : <Menu size={20}/>}
                 </button>
               )}
               <Link href="/" className="text-gray-500 hover:text-gray-700">
                 <ArrowLeft size={20} />
               </Link>
               <h1 className="text-xl md:text-2xl font-semibold flex items-center ml-2">
-                <UsersRound className="mr-2" size={22} /> Team
+                <UsersRound size={22} className="mr-2" /> Team
               </h1>
             </div>
             <button
               onClick={() => router.push('/team/create')}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
             >
-              <Plus size={18} className="mr-2" />
-              Add Member
+              <Plus size={18} className="mr-2" /> Add Member
             </button>
           </div>
         </div>
 
         {/* Filters */}
         <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
-          <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-gray-200 flex flex-col md:flex-row md:justify-between gap-4">
+          <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border flex flex-col md:flex-row md:justify-between gap-4">
             <div className="relative w-full md:w-1/3">
               <input
                 type="text"
                 placeholder="Search team..."
                 className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
               />
-              <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+              <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
             </div>
-            <div className="flex gap-2 items-center w-full md:w-auto">
+            <div className="flex items-center gap-2 w-full md:w-auto">
               <span className="text-sm text-gray-600">Status:</span>
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={e => setStatusFilter(e.target.value)}
                 className="pl-3 pr-8 py-2 border border-gray-300 rounded-lg"
               >
                 <option value="all">All</option>
@@ -170,134 +180,133 @@ export default function TeamPage() {
               </select>
             </div>
           </div>
-          {/* Team List – Desktop */} 
-<div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-  <div className="overflow-x-auto">
-    <table className="min-w-full divide-y divide-gray-200">
-      <thead className="bg-gray-50">
-        <tr>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            <input
-              type="checkbox"
-              className="h-4 w-4 text-blue-600"
-              checked={selectedMembers.length === filteredMembers.length && filteredMembers.length > 0}
-              onChange={toggleSelectAll}
-            />
-          </th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-        </tr>
-      </thead>
-      <tbody className="bg-white divide-y divide-gray-200">
-        {filteredMembers.map(member => (
-          <tr key={member.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleEdit(member.id)}>
-            <td className="px-6 py-4" onClick={e => { e.stopPropagation(); toggleSelection(member.id); }}>
-              <input
-                type="checkbox"
-                className="h-4 w-4 text-blue-600"
-                checked={selectedMembers.includes(member.id)}
-                readOnly
-              />
-            </td>
-            <td className="px-6 py-4">
-              <div className="flex items-center">
-                <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
-                  {member.coverImageUrl ? (
-                    <img src={member.coverImageUrl} alt={member.name} className="h-full w-full object-cover" />
+
+          {/* Desktop */}
+          <div className="hidden md:block bg-white rounded-xl shadow-sm border overflow-hidden mb-6">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 text-blue-600"
+                        checked={
+                          selectedMembers.length === filteredMembers.length &&
+                          filteredMembers.length > 0
+                        }
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center">
+                        <LoadingSpinner className="h-8 w-8 text-gray-400 mx-auto" />
+                      </td>
+                    </tr>
+                  ) : filteredMembers.length > 0 ? (
+                    filteredMembers.map(member => (
+                      <tr
+                        key={member.id}
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() => handleEdit(member.id)}
+                      >
+                        <td
+                          className="px-6 py-4"
+                          onClick={e => { e.stopPropagation(); toggleSelection(member.id); }}
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 text-blue-600"
+                            checked={selectedMembers.includes(member.id)}
+                            readOnly
+                          />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+                              {member.coverImageUrl ? (
+                                <img
+                                  src={member.coverImageUrl}
+                                  alt={member.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <ImageIcon size={20} className="text-gray-400" />
+                              )}
+                            </div>
+                            <div className="ml-4 text-sm font-medium text-gray-900">
+                              {member.name}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {member.title}
+                        </td>
+                        <td className="px-6 py-4">
+                          {renderStatusBadge(member.status)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {renderDate(member.createdAt)}
+                        </td>
+                        <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => handleEdit(member.id)} className="text-indigo-600 hover:text-indigo-900 mr-2">
+                            <PencilLine size={16} />
+                          </button>
+                          <button onClick={() => handleDelete(member.id)} className="text-red-600 hover:text-red-900">
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
                   ) : (
-                    <ImageIcon size={20} className="text-gray-400" />
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-gray-500">
+                        No team members found.
+                      </td>
+                    </tr>
                   )}
-                </div>
-                <div className="ml-4 text-sm font-medium text-gray-900">{member.name}</div>
-              </div>
-            </td>
-            <td className="px-6 py-4 text-sm text-gray-500">{member.title}</td>
-            <td className="px-6 py-4">{renderStatusBadge(member.status)}</td>
-            <td className="px-6 py-4 text-sm text-gray-500">{renderDate(member.createdAt)}</td>
-            <td className="px-6 py-4 text-right">
-              <div className="flex justify-end gap-2" onClick={e => e.stopPropagation()}>
-                <button onClick={() => handleEdit(member.id)} className="text-indigo-600 hover:text-indigo-900">
-                  <PencilLine size={16} />
-                </button>
-                <button onClick={() => handleDelete(member.id)} className="text-red-600 hover:text-red-900">
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-
-          {/* Team List – Mobile */}
-          <div className="md:hidden space-y-4">
-            {filteredMembers.map(member => (
-              <div
-                key={member.id}
-                className="bg-white rounded-xl border shadow-sm p-4"
-                onClick={() => handleEdit(member.id)}
-              >
-                <div className="flex justify-between items-center mb-3">
-                  <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                      {member.coverImageUrl ? (
-                        <img src={member.coverImageUrl} alt={member.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <ImageIcon className="text-gray-500" size={20} />
-                      )}
-                    </div>
-                    <div className="ml-3 text-sm font-medium text-gray-900">{member.name}</div>
-                  </div>
-                  {renderStatusBadge(member.status)}
-                </div>
-                <div className="text-sm text-gray-700 mb-2">{member.title}</div>
-                <div className="text-sm text-gray-500 mb-2">Joined: {renderDate(member.createdAt)}</div>
-                <div className="flex justify-between items-center border-t pt-3" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 text-blue-600 rounded border-gray-300 mr-2"
-                      checked={selectedMembers.includes(member.id)}
-                      onChange={() => toggleSelection(member.id)}
-                    />
-                    <span className="text-xs text-gray-500">Select</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="text-indigo-600 hover:text-indigo-900" onClick={() => handleEdit(member.id)}>
-                      <PencilLine size={16} />
-                    </button>
-                    <button className="text-red-600 hover:text-red-900" onClick={() => handleDelete(member.id)}>
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {loading && (
-            <div className="flex justify-center mt-8">
-              <LoadingSpinner className="text-gray-400 h-8 w-8" />
-            </div>
-          )}
-
-          {!loading && filteredMembers.length === 0 && (
-            <div className="text-center py-12 bg-white rounded-xl border shadow-sm">
-              <p className="text-gray-500">No team members found.</p>
-              <button
-                onClick={() => router.push('/team/create')}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
-              >
-                Add New Member
-              </button>
-            </div>
-          )}
+          {/* Mobile */}
+          <div className="md:hidden space-y-4">
+            {loading ? (
+              <div className="py-8 text-center">
+                <LoadingSpinner className="h-8 w-8 text-gray-400 mx-auto" />
+              </div>
+            ) : filteredMembers.length > 0 ? (
+              filteredMembers.map(member => (
+                <div
+                  key={member.id}
+                  className="bg-white rounded-xl border shadow-sm p-4 cursor-pointer"
+                  onClick={() => handleEdit(member.id)}
+                >
+                  {/* ...your existing mobile card markup here */}
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12 bg-white rounded-xl border shadow-sm">
+                <p className="text-gray-500">No team members found.</p>
+                <button
+                  onClick={() => router.push('/team/create')}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+                >
+                  Add New Member
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>

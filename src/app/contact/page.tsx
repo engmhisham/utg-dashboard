@@ -1,8 +1,10 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../../components/Sidebar';
 import Cookies from 'js-cookie';
+import LoadingSpinner from '@/src/components/LoadingSpinner';
 import {
   ArrowLeft,
   Search,
@@ -10,8 +12,7 @@ import {
   BookUser,
   Menu,
   X,
-  PencilLine,
-  EyeIcon
+  PencilLine
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -33,26 +34,26 @@ export default function ContactPage() {
   const [selectedMessages, setSelectedMessages] = useState<string[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+  // viewport check
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
 
+  // fetch messages
   useEffect(() => {
-    const fetchMessages = async () => {
+    (async () => {
       setLoading(true);
       const token = Cookies.get('accessToken');
       try {
         const res = await fetch(`${API_BASE_URL}/contact-messages`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         setMessages(data.data.items || []);
@@ -62,67 +63,69 @@ export default function ContactPage() {
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchMessages();
+    })();
   }, []);
 
-  const filteredMessages = messages.filter((msg) => {
-    const query = searchQuery.toLowerCase();
+  const filtered = messages.filter(msg => {
+    const q = searchQuery.toLowerCase();
     return (
-      msg.fullName.toLowerCase().includes(query) ||
-      msg.email.toLowerCase().includes(query) ||
-      msg.subject.toLowerCase().includes(query) ||
-      msg.message.toLowerCase().includes(query)
+      msg.fullName.toLowerCase().includes(q) ||
+      msg.email.toLowerCase().includes(q) ||
+      msg.subject.toLowerCase().includes(q) ||
+      msg.message.toLowerCase().includes(q)
     );
   });
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this message?')) return;
-    const token = Cookies.get('accessToken');
+  const toggleMessageSelection = (id: string) =>
+    setSelectedMessages(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
 
+  const toggleSelectAll = () => {
+    if (selectedMessages.length === filtered.length) {
+      setSelectedMessages([]);
+    } else {
+      setSelectedMessages(filtered.map(m => m.id));
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this message?')) return;
+    const token = Cookies.get('accessToken');
     try {
       const res = await fetch(`${API_BASE_URL}/contact-messages/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!res.ok) throw new Error('Failed to delete');
-      setMessages(prev => prev.filter(msg => msg.id !== id));
-      toast.success('Message deleted ✅');
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to delete ❌');
+      if (!res.ok) throw new Error();
+      setMessages(prev => prev.filter(m => m.id !== id));
+      toast.success('Deleted ✅');
+    } catch {
+      toast.error('Delete failed ❌');
     }
   };
 
-  const toggleMessageSelection = (id: string) => {
-    setSelectedMessages(prev =>
-      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
-    );
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedMessages.length === filteredMessages.length) {
-      setSelectedMessages([]);
-    } else {
-      setSelectedMessages(filteredMessages.map(m => m.id));
-    }
-  };
   const handleView = (id: string) => {
     router.push(`/contact/edit/${id}`);
   };
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        toggleSidebar={() => setSidebarOpen(o => !o)}
+      />
 
       <main className="flex-1 overflow-y-auto">
-        {/* Header */}
+        {/* Page Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
           <div className="p-4 md:p-6 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {isMobile && (
-                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 bg-white rounded-full shadow-md border">
+                <button
+                  onClick={() => setSidebarOpen(o => !o)}
+                  className="p-1 bg-white rounded-full shadow-md border"
+                >
                   {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
               )}
@@ -130,29 +133,29 @@ export default function ContactPage() {
                 <ArrowLeft size={20} />
               </Link>
               <h1 className="text-xl md:text-2xl font-semibold flex items-center ml-2">
-                <BookUser className="mr-2" size={22} /> Contact Messages
+                <BookUser size={22} className="mr-2" /> Contact Messages
               </h1>
             </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
+        {/* Search bar */}
+        <div className="mx-auto max-w-7xl px-4 pb-6">
           <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border">
             <div className="relative w-full md:w-1/3">
               <input
                 type="text"
-                placeholder="Search messages..."
                 className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg"
+                placeholder="Search messages..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
               />
               <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
             </div>
           </div>
 
-          {/* Desktop View */}
-          <div className="hidden md:block bg-white rounded-xl border shadow-sm overflow-hidden">
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-white rounded-xl border shadow-sm overflow-hidden mb-6">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -161,96 +164,149 @@ export default function ContactPage() {
                       <input
                         type="checkbox"
                         className="h-4 w-4 text-blue-600"
-                        checked={selectedMessages.length === filteredMessages.length && filteredMessages.length > 0}
+                        checked={
+                          selectedMessages.length === filtered.length &&
+                          filtered.length > 0
+                        }
                         onChange={toggleSelectAll}
                       />
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Full Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Message</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Full Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Subject
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Message
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredMessages.map(message => (
-                    <tr key={message.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleView(message.id)}>
-                      <td className="px-6 py-4">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 text-blue-600"
-                          checked={selectedMessages.includes(message.id)}
-                          onChange={() => toggleMessageSelection(message.id)}
-                        />
-                      </td>
-                      <td className="px-6 py-4">{message.fullName}</td>
-                      <td className="px-6 py-4 text-blue-600">{message.email}</td>
-                      <td className="px-6 py-4">{message.subject}</td>
-                      <td className="px-6 py-4 truncate max-w-sm">{message.message}</td>
-                      <td className="px-6 py-4 text-gray-500">
-                        {new Date(message.date).toLocaleDateString('en-US', {
-                          year: 'numeric', month: 'short', day: 'numeric',
-                        })}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleDelete(message.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center">
+                        <LoadingSpinner className="h-8 w-8 text-gray-400 mx-auto" />
                       </td>
                     </tr>
-                  ))}
+                  ) : filtered.length > 0 ? (
+                    filtered.map(msg => (
+                      <tr
+                        key={msg.id}
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() => handleView(msg.id)}
+                      >
+                        <td
+                          className="px-6 py-4"
+                          onClick={e => {
+                            e.stopPropagation();
+                            toggleMessageSelection(msg.id);
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 text-blue-600"
+                            checked={selectedMessages.includes(msg.id)}
+                            readOnly
+                          />
+                        </td>
+                        <td className="px-6 py-4">{msg.fullName}</td>
+                        <td className="px-6 py-4 text-blue-600">{msg.email}</td>
+                        <td className="px-6 py-4">{msg.subject}</td>
+                        <td className="px-6 py-4 truncate max-w-sm">{msg.message}</td>
+                        <td className="px-6 py-4 text-gray-500">
+                          {new Date(msg.date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => handleDelete(msg.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-500">
+                        No contact messages found.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Mobile View */}
+          {/* Mobile Cards */}
           <div className="md:hidden space-y-4">
-            {filteredMessages.map(message => (
-              <div key={message.id} className="bg-white rounded-xl border shadow-sm p-4 cursor-pointer" onClick={() => handleView(message.id)}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 text-blue-600 mr-2"
-                      checked={selectedMessages.includes(message.id)}
-                      onChange={() => toggleMessageSelection(message.id)}
-                    />
-                    <span className="text-sm font-medium text-gray-900">{message.fullName}</span>
-                  </div>
-                  <span className="text-xs text-gray-500">
-                    {new Date(message.date).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="text-sm text-blue-600">{message.email}</div>
-                <div className="text-sm text-gray-700 mt-1"><strong>Subject:</strong> {message.subject}</div>
-                <div className="text-sm text-gray-700 mt-1">{message.message}</div>
-                <div className="mt-3 flex justify-end space-x-2">
-                  <button
-                    onClick={() => handleDelete(message.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
+            {loading ? (
+              <div className="py-8 text-center">
+                <LoadingSpinner className="h-8 w-8 text-gray-400 mx-auto" />
               </div>
-            ))}
+            ) : filtered.length > 0 ? (
+              filtered.map(msg => (
+                <div
+                  key={msg.id}
+                  className="bg-white rounded-xl border shadow-sm p-4 cursor-pointer"
+                  onClick={() => handleView(msg.id)}
+                >
+                  {/* card header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 text-blue-600 mr-2"
+                        checked={selectedMessages.includes(msg.id)}
+                        onChange={() => toggleMessageSelection(msg.id)}
+                      />
+                      <span className="text-sm font-medium text-gray-900">
+                        {msg.fullName}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {new Date(msg.date).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {/* card body */}
+                  <div className="text-sm text-blue-600">{msg.email}</div>
+                  <div className="text-sm text-gray-700 mt-1">
+                    <strong>Subject:</strong> {msg.subject}
+                  </div>
+                  <div className="text-sm text-gray-700 mt-1 truncate">
+                    {msg.message}
+                  </div>
+                  {/* card actions */}
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={() => handleDelete(msg.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12 bg-white rounded-xl shadow-sm border">
+                <p className="text-gray-500">No contact messages found.</p>
+              </div>
+            )}
           </div>
-
-          {/* Empty State */}
-          {!loading && filteredMessages.length === 0 && (
-            <div className="text-center py-12 bg-white rounded-xl shadow-sm border">
-              <p className="text-gray-500">No contact messages found.</p>
-            </div>
-          )}
-
-          {loading && (
-            <div className="text-center py-10 text-gray-400">Loading...</div>
-          )}
         </div>
       </main>
     </div>
