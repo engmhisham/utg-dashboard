@@ -10,7 +10,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);          // ⬅️ NEW
+  const [loading, setLoading] = useState(false);
 
   // Redirect if already logged‑in
   useEffect(() => {
@@ -20,7 +20,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);                                     // ⬅️ NEW
+    setLoading(true);
 
     try {
       const res = await fetch(

@@ -28,9 +28,8 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-lg shadow">
-        <h1 className="text-2xl font-bold mb-4 text-center">Forgot Password</h1>
+    <div className="w-full max-w-md bg-white p-8 rounded-lg shadow">
+      <h1 className="text-2xl font-bold mb-4 text-center">Forgot Password</h1>
 
         {status === 'sent' ? (
           <div className="text-center space-y-4">
@@ -71,6 +70,5 @@ export default function ForgotPasswordPage() {
           </form>
         )}
       </div>
-    </div>
   );
 }
