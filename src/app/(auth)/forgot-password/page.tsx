@@ -34,13 +34,13 @@ export default function ForgotPasswordPage() {
         {status === 'sent' ? (
           <div className="text-center space-y-4">
             <p className="text-gray-700">
-              إذا وجدنا حسابًا يطابق هذا البريد، فسوف نرسل رسالة تحتوي على رابط إعادة التعيين.
+              If you have an account, We've sent you an email with a link to reset your password.
             </p>
             <button
               className="text-purple-600 hover:underline"
               onClick={() => router.push('/login')}
             >
-              الرجوع إلى تسجيل الدخول
+              Back to login
             </button>
           </div>
         ) : (
