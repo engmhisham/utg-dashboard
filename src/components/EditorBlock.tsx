@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import Cookies from 'js-cookie';
-import '../app/editorjs-styles.css';
 
 // Define minimal interfaces to avoid type conflicts
 interface EditorBlockProps {
