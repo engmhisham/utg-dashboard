@@ -1,0 +1,143 @@
+/* Editor.js styling to ensure headers appear correctly */
+@import url('https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest/dist/editor.min.css');
+/* Container styling */
+.codex-editor {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    position: relative;
+  width: 100%;
+  margin: 0;
+  padding: 0 15px;
+  }
+  
+  /* Header styling */
+  .ce-header {
+    padding: 0.6em 0;
+    margin: 0;
+    line-height: 1.25em;
+    outline: none;
+    font-weight: bold;
+  }
+  
+  .ce-header h1 {
+    font-size: 2em;
+  }
+  
+  .ce-header h2 {
+    font-size: 1.75em;
+  }
+  
+  .ce-header h3 {
+    font-size: 1.5em;
+  }
+  
+  .ce-header h4 {
+    font-size: 1.25em;
+  }
+  
+  .ce-header h5 {
+    font-size: 1em;
+  }
+  
+  .ce-header h6 {
+    font-size: 0.85em;
+  }
+  
+  /* Make the block elements stand out */
+  .ce-block {
+    padding: 0.4em 0;
+  }
+  
+  /* Ensure focus state is visible */
+  .ce-block--focused {
+    background-color: rgba(220, 240, 255, 0.15);
+    border-radius: 3px;
+  }
+  
+  /* Toolbar styling */
+  .ce-toolbar__content {
+    max-width: 100% !important;
+  left: 0;
+  right: 0;
+  margin-left: 0;
+  }
+  .ce-toolbar__actions {
+    right: 0;
+    top: 0;
+  }
+  
+  .ce-toolbar__plus {
+    color: #3b82f6; /* Blue color to match your theme */
+    left: -25px;
+  top: 50%;
+  transform: translateY(-50%);
+  }
+  
+  .ce-toolbar__plus:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+  
+  /* RTL support */
+  [dir="rtl"] .ce-block__content {
+    text-align: right;
+  }
+  
+  [dir="rtl"] .ce-toolbar__plus {
+    right: -34px;
+    left: auto;
+  }
+  
+  /* Improve image tool */
+  .image-tool {
+    margin: 1em 0;
+  }
+  
+  .image-tool__image {
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  
+  /* Table styling */
+  .tc-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .tc-table td {
+    border: 1px solid #e2e8f0;
+    padding: 8px;
+  }
+  
+  /* Quote styling */
+  .cdx-quote__text {
+    min-height: 50px;
+    font-style: italic;
+    padding-left: 12px;
+    border-left: 3px solid #e2e8f0;
+  }
+
+  .ce-block--selected .ce-block__content {
+  background-color: rgba(220, 240, 255, 0.2);
+}
+
+.codex-editor__redactor {
+  padding-bottom: 100px !important;
+}
+
+.ce-toolbar__plus {
+  color: #3b82f6;
+}
+
+.ce-toolbar__plus:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Make the toolbar always visible */
+.ce-toolbar {
+  opacity: 1 !important;
+}
+
+/* Improve button spacing in toolbar */
+.ce-settings__button, 
+.ce-toolbar__settings-btn {
+  padding: 6px !important;
+}
