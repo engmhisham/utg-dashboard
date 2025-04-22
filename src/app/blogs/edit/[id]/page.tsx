@@ -1,73 +1,99 @@
+// File: app/(dashboard)/blogs/[id]/page.tsx  (or wherever your edit page lives)
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from 'react';
 import Sidebar from '@/src/components/Sidebar';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import {
-  ArrowLeft, Menu, X, Image as ImageIcon, PencilLine
+  ArrowLeft,
+  Menu,
+  X,
+  Image as ImageIcon,
+  PencilLine,
 } from 'lucide-react';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
-import dynamic from 'next/dynamic';
 
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+import ReactQuill from 'react-quill';
+import Quill, { RangeStatic } from 'quill';
+import ImageUploader from 'quill-image-uploader';
+import 'react-quill/dist/quill.snow.css';
+
+// ─ register the image‑uploader module ────────────────────────────────────────
+Quill.register('modules/imageUploader', ImageUploader);
 
 type Lang = 'en' | 'ar';
 
 export default function BlogEditPage() {
-  /* ────────────────────────── routing & UI helpers ───────────────────────── */
-  const { id }   = useParams<{ id: string }>();      // <-- param name = [id]
-  const router   = useRouter();
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
 
+  // layout / sidebar
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isMobile,    setIsMobile]    = useState(false);
-
+  const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const fx = () => setIsMobile(window.innerWidth < 768);
-    fx();
-    window.addEventListener('resize', fx);
-    return () => window.removeEventListener('resize', fx);
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  /* ───────────────────────────── form state ─────────────────────────────── */
+  // form state
   const [activeLang, setActiveLang] = useState<Lang>('en');
-  const [loading,    setLoading]    = useState(true);
-
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     slug: '',
     status: 'draft',
-    title_en: '', description_en: '', content_en: '',
-    title_ar: '', description_ar: '', content_ar: '',
-    coverImageUrl: ''
+    title_en: '',
+    description_en: '',
+    content_en: '',
+    title_ar: '',
+    description_ar: '',
+    content_ar: '',
+    coverImageUrl: '',
   });
-
   const handle = (field: string, value: string) =>
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm((p) => ({ ...p, [field]: value }));
 
-  /* ───────────────────────── fetch existing blog ────────────────────────── */
+  // fetch existing blog
   useEffect(() => {
     if (!id) return;
     (async () => {
       try {
         const token = Cookies.get('accessToken');
-        const r = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/blogs/${id}?language=en`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (!r.ok) throw new Error('Failed to fetch blog');
-        const d = await r.json();
-
+  
+        // fire both requests in parallel
+        const [enRes, arRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/blogs/${id}?language=en`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/blogs/${id}?language=ar`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+  
+        if (!enRes.ok || !arRes.ok) throw new Error('Failed to load');
+  
+        const enJson = await enRes.json();
+        const arJson = await arRes.json();
+  
         setForm({
-          slug:            d.data.slug,
-          status:          d.data.status,
-          title_en:        d.data.title,
-          description_en:  d.data.description,
-          content_en:      d.data.content,
-          title_ar:        d.translation?.title        || '',
-          description_ar:  d.translation?.description  || '',
-          content_ar:      d.translation?.content      || '',
-          coverImageUrl:   d.data.coverImageUrl        || ''
+          slug:           enJson.data.slug,
+          status:         enJson.data.status,
+          title_en:       enJson.data.title,
+          description_en: enJson.data.description,
+          content_en:     enJson.data.content,
+          title_ar:       arJson.data.title,
+          description_ar: arJson.data.description,
+          content_ar:     arJson.data.content,
+          coverImageUrl:  enJson.data.coverImageUrl,
         });
       } catch {
         toast.error('Failed to load blog');
@@ -76,30 +102,126 @@ export default function BlogEditPage() {
       }
     })();
   }, [id]);
+  
 
-  /* ─────────────────────────── image upload ─────────────────────────────── */
-  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // COVER‑image upload outside Quill
+  const onCoverFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const token = Cookies.get('accessToken');
-    const fd    = new FormData();
+    const fd = new FormData();
     fd.append('file', file);
 
     try {
       const r = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/files/upload`,
-        { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd }
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` || '' },
+          body: fd,
+        }
       );
-      if (!r.ok) throw new Error('Upload failed');
       const d = await r.json();
-      handle('coverImageUrl', `${process.env.NEXT_PUBLIC_UPLOAD_BASE}${d.data.url}`);
+      handle(
+        'coverImageUrl',
+        `${process.env.NEXT_PUBLIC_UPLOAD_BASE}${d.data.url}`
+      );
     } catch {
       toast.error('Upload failed');
     }
   };
 
-  /* ───────────────────────────── submit ──────────────────────────────── */
+  // QUILL ref & image‑upload handler
+  const quillRef = useRef<ReactQuill | null>(null);
+  const handleImageUpload = useCallback(async (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const token = Cookies.get('accessToken');
+    const r = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/files/upload`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` || '' },
+        body: fd,
+      }
+    );
+    const d = await r.json();
+    return `${process.env.NEXT_PUBLIC_UPLOAD_BASE}${d.data.url}`;
+  }, []);
+
+  // CUSTOM LINK DIALOG state
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkText, setLinkText] = useState('');
+  const [linkTooltip, setLinkTooltip] = useState('');
+  const [openInNewTab, setOpenInNewTab] = useState(true);
+  const savedRange = useRef<RangeStatic | null>(null);
+
+  const openLinkDialog = useCallback(() => {
+    const editor = quillRef.current!.getEditor();
+    const range = editor.getSelection();
+    if (range) {
+      savedRange.current = range;
+      setLinkText(editor.getText(range.index, range.length));
+    }
+    setLinkModalOpen(true);
+  }, []);
+
+  const applyLink = useCallback(() => {
+    const editor = quillRef.current!.getEditor();
+    const range = savedRange.current;
+    if (!range) {
+      setLinkModalOpen(false);
+      return;
+    }
+    editor.deleteText(range.index, range.length);
+    editor.insertText(range.index, linkText, 'link', linkUrl);
+
+    // grab the <a> node from the blot and set attributes
+    const [leaf] = editor.getLeaf(range.index);
+    const parent = (leaf as any).parent as { domNode?: HTMLElement };
+    const a = parent.domNode as HTMLAnchorElement | undefined;
+    if (a?.tagName === 'A') {
+      a.setAttribute('title', linkTooltip);
+      if (openInNewTab) a.setAttribute('target', '_blank');
+      else a.removeAttribute('target');
+    }
+    setLinkModalOpen(false);
+  }, [linkText, linkUrl, linkTooltip, openInNewTab]);
+
+  // stable modules & formats
+  const modules = useMemo(
+    () => ({
+      toolbar: {
+        container: [
+          [{ header: [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ color: [] }, { background: [] }],
+          ['link', 'image'],
+          ['clean'],
+        ],
+        handlers: { link: openLinkDialog },
+      },
+      imageUploader: { upload: handleImageUpload },
+    }),
+    [openLinkDialog, handleImageUpload]
+  );
+  const formats = useMemo(
+    () => [
+      'header',
+      'bold',
+      'italic',
+      'underline',
+      'strike',
+      'color',
+      'background',
+      'link',
+      'image',
+    ],
+    []
+  );
+
+  // PATCH submit
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -110,20 +232,19 @@ export default function BlogEditPage() {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${token}` || '',
           },
-          body: JSON.stringify(form)
+          body: JSON.stringify(form),
         }
       );
       if (!r.ok) throw new Error((await r.json()).message || 'Failed');
-      toast.success('Blog updated ✅');
+      toast.success('Blog updated ✅');
       router.push('/blogs');
     } catch (err: any) {
       toast.error(err.message || 'Error');
     }
   };
 
-  /* ───────────────────────────── render ──────────────────────────────── */
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -147,15 +268,12 @@ export default function BlogEditPage() {
               {isMobile && (
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="mr-2 rounded-full p-1 border shadow"
+                  className="mr-2 p-1 rounded-full border shadow"
                 >
                   {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
               )}
-              <Link
-                href="/blogs"
-                className="text-gray-500 hover:text-gray-700 mr-2"
-              >
+              <Link href="/blogs" className="text-gray-500 hover:text-gray-700 mr-2">
                 <ArrowLeft size={20} />
               </Link>
               <h1 className="text-xl md:text-2xl font-semibold flex items-center">
@@ -163,7 +281,6 @@ export default function BlogEditPage() {
                 Edit Blog
               </h1>
             </div>
-
             {!isMobile && (
               <div className="flex space-x-3">
                 <button
@@ -188,24 +305,28 @@ export default function BlogEditPage() {
           onSubmit={submit}
           className="mx-auto max-w-7xl px-4 pb-24 space-y-6"
         >
-          {/* meta */}
+          {/* Meta */}
           <div className="bg-white p-6 rounded-xl border shadow-sm">
             <h2 className="text-lg font-medium mb-4">Meta</h2>
             <div className="flex flex-col md:flex-row md:space-x-6">
               <div className="flex-1 mb-4 md:mb-0">
-                <label className="block text-sm font-medium mb-1">Slug *</label>
+                <label className="block text-sm font-medium mb-1">
+                  Slug *
+                </label>
                 <input
                   required
                   value={form.slug}
-                  onChange={e => handle('slug', e.target.value)}
+                  onChange={(e) => handle('slug', e.target.value)}
                   className="w-full border rounded-lg p-3"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Status</label>
+                <label className="block text-sm font-medium mb-1">
+                  Status
+                </label>
                 <select
                   value={form.status}
-                  onChange={e => handle('status', e.target.value)}
+                  onChange={(e) => handle('status', e.target.value)}
                   className="border rounded-lg p-3"
                 >
                   <option value="draft">Draft</option>
@@ -216,12 +337,16 @@ export default function BlogEditPage() {
             </div>
           </div>
 
-          {/* cover image */}
+          {/* Cover Image */}
           <div className="bg-white p-6 rounded-xl border shadow-sm">
             <h2 className="text-lg font-medium mb-4">Cover image</h2>
             {form.coverImageUrl ? (
               <div className="relative max-w-xs">
-                <img src={form.coverImageUrl} className="rounded-lg" />
+                <img
+                  src={form.coverImageUrl}
+                  alt="Cover"
+                  className="rounded-lg"
+                />
                 <button
                   type="button"
                   onClick={() => handle('coverImageUrl', '')}
@@ -237,17 +362,17 @@ export default function BlogEditPage() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={onFile}
+                  onChange={onCoverFile}
                   className="hidden"
                 />
               </label>
             )}
           </div>
 
-          {/* language tabs */}
+          {/* Language Tabs + Editor */}
           <div className="bg-white p-6 rounded-xl border shadow-sm">
             <div className="flex border-b mb-4 space-x-4">
-              {(['en', 'ar'] as Lang[]).map(l => (
+              {(['en', 'ar'] as Lang[]).map((l) => (
                 <button
                   key={l}
                   type="button"
@@ -264,9 +389,10 @@ export default function BlogEditPage() {
             </div>
 
             {(['en', 'ar'] as Lang[]).map(
-              l =>
+              (l) =>
                 activeLang === l && (
                   <div key={l} className="space-y-4">
+                    {/* Title */}
                     <div>
                       <label className="block text-sm font-medium mb-1">
                         Title ({l}) *
@@ -274,10 +400,13 @@ export default function BlogEditPage() {
                       <input
                         required
                         value={(form as any)[`title_${l}`]}
-                        onChange={e => handle(`title_${l}`, e.target.value)}
+                        onChange={(e) =>
+                          handle(`title_${l}`, e.target.value)
+                        }
                         className="w-full border rounded-lg p-3"
                       />
                     </div>
+                    {/* Description */}
                     <div>
                       <label className="block text-sm font-medium mb-1">
                         Description ({l}) *
@@ -286,20 +415,25 @@ export default function BlogEditPage() {
                         required
                         rows={3}
                         value={(form as any)[`description_${l}`]}
-                        onChange={e =>
+                        onChange={(e) =>
                           handle(`description_${l}`, e.target.value)
                         }
                         className="w-full border rounded-lg p-3"
                       />
                     </div>
+                    {/* Content */}
                     <div>
                       <label className="block text-sm font-medium mb-1">
                         Content ({l}) *
                       </label>
                       <ReactQuill
+                        ref={quillRef}
                         theme="snow"
+                        modules={modules}
+                        formats={formats}
                         value={(form as any)[`content_${l}`]}
-                        onChange={v => handle(`content_${l}`, v)}
+                        onChange={(v) => handle(`content_${l}`, v)}
+                        className={l === 'ar' ? 'rtl' : ''}
                       />
                     </div>
                   </div>
@@ -308,7 +442,7 @@ export default function BlogEditPage() {
           </div>
         </form>
 
-        {/* mobile save bar */}
+        {/* Mobile Save Bar */}
         {isMobile && (
           <div className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex space-x-3">
             <button
@@ -323,6 +457,63 @@ export default function BlogEditPage() {
             >
               Save
             </button>
+          </div>
+        )}
+
+        {/* Custom Link Modal */}
+        {linkModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center">
+            <div className="relative z-60 bg-white p-6 rounded-lg max-w-md w-full space-y-4">
+              <h2 className="text-lg font-medium">Add/Edit Link</h2>
+
+              <label className="block text-sm font-medium">URL</label>
+              <input
+                type="text"
+                className="w-full border rounded p-2"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+              />
+
+              <label className="block text-sm font-medium">Display Text</label>
+              <input
+                type="text"
+                className="w-full border rounded p-2"
+                value={linkText}
+                onChange={(e) => setLinkText(e.target.value)}
+              />
+
+              <label className="block text-sm font-medium">Tooltip</label>
+              <input
+                type="text"
+                className="w-full border rounded p-2"
+                value={linkTooltip}
+                onChange={(e) => setLinkTooltip(e.target.value)}
+              />
+
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={openInNewTab}
+                  onChange={() => setOpenInNewTab((f) => !f)}
+                />
+                <span>Open in new tab</span>
+              </label>
+
+              <div className="flex justify-end space-x-2">
+                <button
+                  className="px-4 py-2 bg-gray-200 rounded"
+                  onClick={() => setLinkModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 bg-blue-600 text-white rounded"
+                  onClick={applyLink}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>
