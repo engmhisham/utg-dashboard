@@ -104,7 +104,7 @@ export default function FaqEditPage() {
         body: JSON.stringify(form)
       });
       if (!res.ok) throw new Error((await res.json()).message || 'Failed');
-      toast.success('FAQ updated ✅');
+      toast.success('FAQ   updated');
       router.push('/faqs');
     } catch (err: any) {
       toast.error(err.message || 'Something went wrong!');

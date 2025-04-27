@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import ConfirmModal from '@/src/components/ConfirmModal';
 
 type ContactMessage = {
   id: string;
@@ -36,7 +37,36 @@ export default function ContactPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [msgToDelete, setMsgToDelete] = useState<string | null>(null);
+  
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+  const openDeleteModal = (id: string) => {
+    setMsgToDelete(id);
+    setDeleteModalOpen(true);
+  };
+  const closeDeleteModal = () => {
+    setMsgToDelete(null);
+    setDeleteModalOpen(false);
+  };
+  const confirmDelete = async () => {
+    if (!msgToDelete) return;
+    const token = Cookies.get('accessToken');
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/contact-messages/${msgToDelete}`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error();
+      setMessages(prev => prev.filter(m => m.id !== msgToDelete));
+      toast.success('Deleted!');
+    } catch {
+      toast.error('Delete failed!');
+    } finally {
+      closeDeleteModal();
+    }
+  };
 
   // viewport check
   useEffect(() => {
@@ -99,9 +129,9 @@ export default function ContactPage() {
       });
       if (!res.ok) throw new Error();
       setMessages(prev => prev.filter(m => m.id !== id));
-      toast.success('Deleted ✅');
+      toast.success('Deleted!');
     } catch {
-      toast.error('Delete failed ❌');
+      toast.error('Delete failed!');
     }
   };
 
@@ -160,17 +190,6 @@ export default function ContactPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 text-blue-600"
-                        checked={
-                          selectedMessages.length === filtered.length &&
-                          filtered.length > 0
-                        }
-                        onChange={toggleSelectAll}
-                      />
-                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Full Name
                     </th>
@@ -205,20 +224,6 @@ export default function ContactPage() {
                         className="hover:bg-gray-50 cursor-pointer"
                         onClick={() => handleView(msg.id)}
                       >
-                        <td
-                          className="px-6 py-4"
-                          onClick={e => {
-                            e.stopPropagation();
-                            toggleMessageSelection(msg.id);
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 text-blue-600"
-                            checked={selectedMessages.includes(msg.id)}
-                            readOnly
-                          />
-                        </td>
                         <td className="px-6 py-4">{msg.fullName}</td>
                         <td className="px-6 py-4 text-blue-600">{msg.email}</td>
                         <td className="px-6 py-4">{msg.subject}</td>
@@ -232,7 +237,7 @@ export default function ContactPage() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button
-                            onClick={() => handleDelete(msg.id)}
+                            onClick={e => {e.stopPropagation(); openDeleteModal(msg.id)}}
                             className="text-red-600 hover:text-red-900"
                           >
                             <Trash2 size={16} />
@@ -268,12 +273,6 @@ export default function ContactPage() {
                   {/* card header */}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 text-blue-600 mr-2"
-                        checked={selectedMessages.includes(msg.id)}
-                        onChange={() => toggleMessageSelection(msg.id)}
-                      />
                       <span className="text-sm font-medium text-gray-900">
                         {msg.fullName}
                       </span>
@@ -293,7 +292,7 @@ export default function ContactPage() {
                   {/* card actions */}
                   <div className="mt-3 flex justify-end">
                     <button
-                      onClick={() => handleDelete(msg.id)}
+                      onClick={e => {e.stopPropagation(); openDeleteModal(msg.id)}}
                       className="text-red-600 hover:text-red-900"
                     >
                       <Trash2 size={16} />
@@ -309,6 +308,12 @@ export default function ContactPage() {
           </div>
         </div>
       </main>
+      <ConfirmModal
+        show={deleteModalOpen}
+        message="Delete this message?"
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+      />
     </div>
   );
 }

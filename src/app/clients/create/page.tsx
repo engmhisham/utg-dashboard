@@ -1,315 +1,390 @@
+// src/app/clients/create/page.tsx
 'use client';
-import { useState, useEffect } from 'react';
-import Sidebar from '../../../components/Sidebar';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, UsersRound, Menu, X } from 'lucide-react';
-import Link from 'next/link';
+
+import { useState, useEffect, ChangeEvent } from 'react';
 import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
+import Sidebar from '../../../components/Sidebar';
+import LoadingSpinner from '@/src/components/LoadingSpinner';
+import {
+  ArrowLeft,
+  UsersRound,
+  Menu,
+  X,
+  ImageIcon,
+  Upload,
+} from 'lucide-react';
+import Link from 'next/link';
+
+type Lang = 'en' | 'ar';
 
 export default function ClientCreatePage() {
-    
   const router = useRouter();
-  
-  // Form state for a new client
+  const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+
+  // form state
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    status: 'active',
-    logo: '',
-    url: ''
+    status:         'active',
+    logoUrl:        '',
+    title_en:       '',
+    description_en: '',
+    url_en:         '',
+    title_ar:       '',
+    description_ar: '',
   });
-  // For mobile view and sidebar toggle
-  const [isMobile, setIsMobile] = useState(false);
+
+  // deferred upload state
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl]   = useState<string | null>(null);
+
+  const [activeLang, setActiveLang]   = useState<Lang>('en');
+  const [loading, setLoading]         = useState(false);
+  const [isMobile, setIsMobile]       = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    return () => window.removeEventListener('resize', checkIfMobile);
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
-     
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+
+  const setField = <K extends keyof typeof formData>(
+    key: K,
+    value: typeof formData[K]
+  ) => setFormData(f => ({ ...f, [key]: value }));
+
+  // 1️⃣ deferred select → preview only
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setPendingFile(file);
+    setPreviewUrl(file ? URL.createObjectURL(file) : null);
   };
-  
+
+  // 2️⃣ upload helper (identical to blogs/brands)
+  const uploadImage = async (file: File, token: string): Promise<string> => {
+    const fd = new FormData();
+    fd.append('file', file);
+
+    const res = await fetch(`${API_URL}/media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Media upload failed');
+    }
+    const { data: media } = await res.json();
+    return `${API_URL}/${media.path}`;
+  };
+
+  // 3️⃣ submit: upload logo if needed, then POST client
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
-    const token = Cookies.get('accessToken');
-  
-    const payload = {
-      status: formData.status,
-      title_en: formData.title,
-      description_en: formData.description,
-      url_en: formData.url,
-      title_ar: formData.title,
-      description_ar: formData.description,
-      url_ar: formData.url,
-      logoUrl: formData.logo || '', // Update later with real upload
-    };
-  
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clients`, {
-        method: 'POST',
+      const token = Cookies.get('accessToken');
+      if (!token) throw new Error('Not authenticated');
+
+      // upload pending logo
+      let logoUrl = formData.logoUrl;
+      if (pendingFile) {
+        logoUrl = await uploadImage(pendingFile, token);
+      }
+
+      const payload = {
+        status:          formData.status,
+        logoUrl,
+        title_en:        formData.title_en,
+        description_en:  formData.description_en,
+        url_en:          formData.url_en,
+        title_ar:        formData.title_ar,
+        description_ar:  formData.description_ar,
+      };
+
+      const res = await fetch(`${API_URL}/clients`, {
+        method:  'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization:  `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
-  
-      if (!response.ok) {
-        throw new Error(`Failed to create client: ${response.statusText}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || res.statusText);
       }
-  
-      const data = await response.json();
-      toast.success('Client created successfully ✅');
+
+      toast.success('Client created!');
       router.push('/clients');
-    } catch (error: any) {
-      console.error('Error:', error);
-      toast.error(error.message || 'Something went wrong ❌');
+    } catch (err: any) {
+      toast.error(err.message || 'Something went wrong!');
+    } finally {
+      setLoading(false);
     }
   };
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-  
-    const token = Cookies.get('accessToken');
-    const formData = new FormData();
-    formData.append('file', file);
-  
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/upload`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`, // 🔐 Add token
-        },
-        body: formData,
-      });
-  
-      const data = await response.json();
-      console.log('Upload result:', data);
-      setFormData(prev => ({ ...prev, logo: `${process.env.NEXT_PUBLIC_UPLOAD_BASE}${data.data.url}` }));
-    } catch (err) {
-      console.error('Upload failed:', err);
-    }
-  };
-  
-  
-  const handleCancel = () => {
-    router.push('/clients');
-  };
+
+  const handleCancel = () => router.push('/clients');
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        toggleSidebar={() => setSidebarOpen(o => !o)}
+      />
 
-      <main className="flex-1 overflow-y-auto relative">
-        {/* Sticky Header (full width, no horizontal padding) */}
+      <main className="flex-1 overflow-y-auto">
+        {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
-          <div className="p-4 md:p-6">
+          <div className="p-4 md:p-6 flex items-center">
             {isMobile ? (
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="p-1 rounded-full bg-white shadow-md border border-gray-200"
-                  aria-label="Toggle sidebar"
+              <>
+                <button
+                  onClick={() => setSidebarOpen(o => !o)}
+                  className="p-1 rounded-full bg-white shadow border"
                 >
                   {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
-                <Link href="/clients" className="text-gray-500 hover:text-gray-700">
+                <Link
+                  href="/clients"
+                  className="text-gray-500 hover:text-gray-700 ml-3"
+                >
                   <ArrowLeft size={20} />
                 </Link>
-                <h1 className="text-xl font-medium ml-2 flex items-center">
-                <UsersRound size={22} className="mr-2" />
-                  Create New Client</h1>
-              </div>
+                <h1 className="text-xl font-medium ml-2">Create New Client</h1>
+              </>
             ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Link href="/clients" className="text-gray-500 hover:text-gray-700 mr-2">
-                    <ArrowLeft size={20} />
-                  </Link>
-                  <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-                    <UsersRound size={22} className="mr-2" />
-                    Create New Client
-                  </h1>
-                </div>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={handleCancel}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmit}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
+              <>
+                <Link
+                  href="/clients"
+                  className="text-gray-500 hover:text-gray-700 mr-2"
+                >
+                  <ArrowLeft size={20} />
+                </Link>
+                <h1 className="text-2xl font-semibold">Create New Client</h1>
+              </>
             )}
           </div>
         </div>
 
-        {/* Main Form Content Container with margins */}
+        {/* Form */}
         <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
-          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-            {/* Status Section */}
-            <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Status */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
               <h2 className="text-lg font-medium mb-4">Status</h2>
               <div className="flex items-center space-x-4">
-                <label className="inline-flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="active"
-                    checked={formData.status === 'active'}
-                    onChange={handleInputChange}
-                    className="sr-only"
-                  />
-                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                    formData.status === 'active'
-                      ? 'border-blue-500 bg-blue-500'
-                      : 'border-gray-300'
-                  }`}>
-                    {formData.status === 'active' && (
-                      <span className="text-white text-xs">✓</span>
-                    )}
-                  </div>
-                  <span className="ml-2">Active</span>
-                </label>
-                <label className="inline-flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="status"
-                    value="inactive"
-                    checked={formData.status === 'inactive'}
-                    onChange={handleInputChange}
-                    className="sr-only"
-                  />
-                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                    formData.status === 'inactive'
-                      ? 'border-blue-500 bg-blue-500'
-                      : 'border-gray-300'
-                  }`}>
-                    {formData.status === 'inactive' && (
-                      <span className="text-white text-xs">✓</span>
-                    )}
-                  </div>
-                  <span className="ml-2">Inactive</span>
-                </label>
+                {['active', 'inactive'].map(s => (
+                  <label key={s} className="inline-flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="status"
+                      value={s}
+                      checked={formData.status === s}
+                      onChange={e => setField('status', e.target.value)}
+                      className="sr-only"
+                    />
+                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                      formData.status === s
+                        ? 'border-blue-500 bg-blue-500'
+                        : 'border-gray-300'
+                    }`}>
+                      {formData.status === s && (
+                        <span className="text-white text-xs">✓</span>
+                      )}
+                    </div>
+                    <span className="ml-2 capitalize">{s}</span>
+                  </label>
+                ))}
               </div>
             </div>
 
-            {/* Logo Section */}
-            <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium">Logo</h2>
-              </div>
+            {/* Logo (deferred) */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+              <h2 className="text-lg font-medium mb-4">Logo</h2>
               <div className="border rounded-lg p-4 bg-gray-50 relative">
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                    <span className="text-gray-400">Logo</span>
+                {(previewUrl || formData.logoUrl) ? (
+                  <div className="relative max-w-xs mx-auto">
+                    <img
+                      src={previewUrl ?? formData.logoUrl}
+                      alt="Logo preview"
+                      className="max-w-full h-auto max-h-64 mx-auto"
+                    />
+                    <div className="absolute top-2 right-2 flex space-x-2">
+                      {/* Re-upload */}
+                      <label
+                        htmlFor="logoUpload"
+                        className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md cursor-pointer"
+                      >
+                        <Upload size={16} className="text-gray-600" />
+                        <input
+                          id="logoUpload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                      {/* Remove */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPendingFile(null);
+                          setPreviewUrl(null);
+                          setField('logoUrl', '');
+                        }}
+                        className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md"
+                      >
+                        <X size={16} className="text-gray-600" />
+                      </button>
+                    </div>
+                    <div className="absolute bottom-4 left-4 bg-white bg-opacity-80 px-2 py-1 rounded text-sm">
+                      {formData.title_en || 'Client'} Logo
+                    </div>
                   </div>
-                  <p className="text-gray-500 mb-4 text-center">Drag & drop your logo here, or click to browse</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="logoUpload"
-                  />
-                  <label
-                    htmlFor="logoUpload"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
-                  >
-                    Upload Logo
-                  </label>
-                  {formData.logo && (
-                    <img src={formData.logo} alt="Logo preview" className="mt-4 w-24 h-24 object-contain" />
-                  )}
-                </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                      <ImageIcon size={32} className="text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 mb-4 text-center">
+                      Drag & drop your logo here, or click to browse
+                    </p>
+                    <label
+                      htmlFor="logoUpload"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+                    >
+                      Upload Logo
+                      <input
+                        id="logoUpload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Client Info Section */}
-            <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
-              <h2 className="text-lg font-medium mb-4">Client Information</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Title <span className="text-blue-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter client title"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter client description"
-                    rows={4}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    URL <span className="text-blue-500">*</span>
-                  </label>
-                  <input
-                    type="url"
-                    name="url"
-                    value={formData.url}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="https://example.com"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Submit Buttons */}
-            <div className="md:hidden">
-              <div className="fixed p-4 bg-white border-t border-gray-200 bottom-0 left-0 w-full">
-                <div className="flex space-x-3">
+            {/* Client Info (bilingual) */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+              <div className="flex border-b mb-6 space-x-6">
+                {(['en', 'ar'] as Lang[]).map(l => (
                   <button
+                    key={l}
                     type="button"
-                    onClick={handleCancel}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50"
+                    onClick={() => setActiveLang(l)}
+                    className={`pb-2 ${
+                      activeLang === l
+                        ? 'border-b-2 border-blue-600 font-medium'
+                        : 'text-gray-500'
+                    }`}
                   >
-                    Cancel
+                    {l.toUpperCase()}
                   </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-                  >
-                    Save
-                  </button>
-                </div>
+                ))}
               </div>
+
+              {activeLang === 'en' ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Title (EN) <span className="text-blue-500">*</span>
+                    </label>
+                    <input
+                      required
+                      name="title_en"
+                      value={formData.title_en}
+                      onChange={e => setField('title_en', e.target.value)}
+                      className="w-full border rounded-lg p-3"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Description (EN)
+                    </label>
+                    <textarea
+                      name="description_en"
+                      value={formData.description_en}
+                      onChange={e => setField('description_en', e.target.value)}
+                      rows={3}
+                      className="w-full border rounded-lg p-3"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      URL (EN) <span className="text-blue-500">*</span>
+                    </label>
+                    <input
+                      required
+                      type="url"
+                      name="url_en"
+                      value={formData.url_en}
+                      onChange={e => setField('url_en', e.target.value)}
+                      className="w-full border rounded-lg p-3"
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-right">
+                      Title (AR) <span className="text-blue-500">*</span>
+                    </label>
+                    <input
+                      required
+                      name="title_ar"
+                      value={formData.title_ar}
+                      onChange={e => setField('title_ar', e.target.value)}
+                      className="w-full border rounded-lg p-3"
+                      dir="rtl"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-right">
+                      Description (AR)
+                    </label>
+                    <textarea
+                      name="description_ar"
+                      value={formData.description_ar}
+                      onChange={e => setField('description_ar', e.target.value)}
+                      rows={3}
+                      className="w-full border rounded-lg p-3"
+                      dir="rtl"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-4 py-2 border border-gray-300 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 flex items-center"
+              >
+                {loading ? (
+                  <LoadingSpinner className="h-5 w-5 text-white" />
+                ) : (
+                  'Save'
+                )}
+              </button>
             </div>
           </form>
         </div>

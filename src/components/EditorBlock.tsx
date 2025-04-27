@@ -9,6 +9,7 @@ interface EditorBlockProps {
   editorRef?: React.MutableRefObject<any>;
   readOnly?: boolean;
   dir?: 'rtl' | 'ltr';
+  onImageAdd?: (file: File, tempId: string) => void;
 }
 
 const EditorBlock: React.FC<EditorBlockProps> = ({ 
@@ -17,7 +18,8 @@ const EditorBlock: React.FC<EditorBlockProps> = ({
   holder, 
   editorRef,
   readOnly = false,
-  dir = 'ltr'
+  dir = 'ltr',
+  onImageAdd,
 }) => {
   // Reference to store the editor instance
   const editorInstanceRef = useRef<any>(null);
@@ -52,31 +54,33 @@ const EditorBlock: React.FC<EditorBlockProps> = ({
         const QuoteTool = (await import('@editorjs/quote')).default;
         const EmbedTool = (await import('@editorjs/embed')).default;
 
-        // Function to upload images
+        // Function to handle image files for deferred upload
         const uploadImageByFile = async (file: File): Promise<any> => {
-          const token = Cookies.get('accessToken');
-          const formData = new FormData();
-          formData.append('file', file);
-          
           try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/upload`, {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token}` },
-              body: formData,
-            });
+            // Generate a temporary ID for this image
+            const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             
-            const result = await response.json();
+            // Create a local URL for preview
+            const previewUrl = URL.createObjectURL(file);
+            
+            // Store the file for later upload
+            if (onImageAdd) {
+              onImageAdd(file, tempId);
+            }
+            
+            // Return the preview URL with the temp ID for later replacement
             return {
               success: 1,
               file: {
-                url: `${process.env.NEXT_PUBLIC_UPLOAD_BASE}${result.data.url}`,
+                url: previewUrl,
+                tempId: tempId, // We'll use this to replace URLs later
               }
             };
           } catch (error) {
-            console.error('Error uploading image:', error);
+            console.error('Error processing image:', error);
             return {
               success: 0,
-              error: 'Upload failed'
+              error: 'Image processing failed'
             };
           }
         };

@@ -16,6 +16,8 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import ConfirmModal from '@/src/components/ConfirmModal';
+import { getImgSrc } from '@/src/utils/getImgSrc';
 
 export default function BrandsPage() {
   const router = useRouter();
@@ -28,8 +30,46 @@ export default function BrandsPage() {
   const [isMobile, setIsMobile]           = useState(false);
   const [sidebarOpen, setSidebarOpen]     = useState(false);
   const [isLoading, setIsLoading]         = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [brandToDelete, setBrandToDelete] = useState<string|null>(null);
 
   const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+  const getLogoSrc = (url: string) => {
+    if (!url) return '';  
+    return url.startsWith('blob:')
+      ? url
+      : getImgSrc(url);
+  };
+
+  // Open modal for given id
+  const openDeleteModal = (id: string) => {
+    setBrandToDelete(id);
+    setDeleteModalOpen(true);
+  };
+  // Close modal
+  const closeDeleteModal = () => {
+    setBrandToDelete(null);
+    setDeleteModalOpen(false);
+  };
+  // When user confirms deletion
+  const confirmDelete = async () => {
+    if (!brandToDelete) return;
+    try {
+      const token = Cookies.get('accessToken');
+      const res = await fetch(`${API}/brands/${brandToDelete}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      setBrands(prev => prev.filter(b => b.id !== brandToDelete));
+    } catch {
+      alert('Delete failed');
+    } finally {
+      closeDeleteModal();
+    }
+  };
+
 
   // viewport check
   useEffect(() => {
@@ -158,17 +198,6 @@ export default function BrandsPage() {
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
-              <div>
-                <span className="text-sm text-gray-600 mr-2">Lang:</span>
-                <select
-                  value={language}
-                  onChange={e => setLanguage(e.target.value as any)}
-                  className="border border-gray-300 rounded-lg py-2 px-3"
-                >
-                  <option value="en">English</option>
-                  <option value="ar">Arabic</option>
-                </select>
-              </div>
             </div>
           </div>
 
@@ -178,14 +207,6 @@ export default function BrandsPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 text-blue-600"
-                        checked={selectedBrands.length === filtered.length && filtered.length > 0}
-                        onChange={toggleSelectAll}
-                      />
-                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Brand
                     </th>
@@ -217,21 +238,10 @@ export default function BrandsPage() {
                         className="hover:bg-gray-50 cursor-pointer"
                         onClick={() => handleEdit(brand.id)}
                       >
-                        <td
-                          className="px-6 py-4"
-                          onClick={e => { e.stopPropagation(); toggleSelect(brand.id); }}
-                        >
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 text-blue-600"
-                            checked={selectedBrands.includes(brand.id)}
-                            readOnly
-                          />
-                        </td>
                         <td className="px-6 py-4 flex items-center">
                           <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden">
                             {brand.logoUrl ? (
-                              <img src={brand.logoUrl} alt="" className="h-full w-full object-cover"/>
+                              <img src={getLogoSrc(brand.logoUrl)} alt="" className="h-full w-full object-cover"/>
                             ) : (
                               <Box size={20} className="text-gray-400 m-2"/>
                             )}
@@ -240,7 +250,7 @@ export default function BrandsPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">{brand.description}</td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 inline-flex text-xs font-semibold rounded-full ${
+                          <span className={`p-2 inline-flex text-xs font-semibold rounded-full ${
                             brand.status === 'active'
                               ? 'bg-green-100 text-green-800'
                               : 'bg-gray-100 text-gray-800'
@@ -259,7 +269,7 @@ export default function BrandsPage() {
                             <PencilLine size={16}/>
                           </button>
                           <button
-                            onClick={() => handleDelete(brand.id)}
+                            onClick={e => {e.stopPropagation(); openDeleteModal(brand.id)}}
                             className="text-red-600 hover:text-red-900"
                           >
                             <Trash2 size={16}/>
@@ -283,51 +293,97 @@ export default function BrandsPage() {
           <div className="md:hidden space-y-4">
             {isLoading ? (
               <div className="py-8 text-center">
-                <LoadingSpinner className="h-8 w-8 text-gray-400 mx-auto"/>
+                <LoadingSpinner className="h-8 w-8 text-gray-400 mx-auto" />
               </div>
             ) : filtered.length > 0 ? (
               filtered.map(brand => (
                 <div
                   key={brand.id}
-                  className="bg-white rounded-xl shadow p-4 cursor-pointer"
+                  className="bg-white rounded-xl border shadow-sm cursor-pointer"
                   onClick={() => handleEdit(brand.id)}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 text-blue-600 mr-2"
-                        checked={selectedBrands.includes(brand.id)}
-                        onChange={() => toggleSelect(brand.id)}
-                      />
-                      <span className="text-sm font-medium text-gray-900">{brand.name}</span>
+                  <div className="p-4">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+                          {brand.logoUrl ? (
+                            <img
+                              src={getLogoSrc(brand.logoUrl)}
+                              alt={brand.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <Box size={20} className="text-gray-400" />
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {brand.name}
+                        </span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={e => { e.stopPropagation(); handleEdit(brand.id); }}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          <PencilLine size={16} />
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); openDeleteModal(brand.id); }}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <span className="text-xs text-gray-500">
-                      {new Date(brand.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-2 line-clamp-2">{brand.description}</p>
-                  <span className="inline-flex text-xs font-semibold rounded-full px-2 py-1 bg-gray-100 text-gray-800">
-                    {brand.status}
-                  </span>
-                  <div className="mt-3 flex justify-end">
-                    <button
-                      onClick={e => { e.stopPropagation(); handleDelete(brand.id); }}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 size={16}/>
-                    </button>
+
+                    {/* Description */}
+                    <p className="mt-2 text-sm text-gray-500 line-clamp-2">
+                      {brand.description}
+                    </p>
+
+                    {/* Footer */}
+                    <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
+                      <span
+                        className={`px-2 inline-flex font-semibold rounded-full ${brand.status === 'active'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                          }`}
+                      >
+                        {brand.status}
+                      </span>
+                      <span>
+                        {new Date(brand.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+              <div className="text-center py-12 bg-white rounded-xl border shadow-sm">
                 <p className="text-gray-500">No brands found.</p>
+                <button
+                  onClick={() => router.push('/brands/create')}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+                >
+                  Add New Brand
+                </button>
               </div>
             )}
           </div>
+
         </div>
       </main>
+      <ConfirmModal
+        show={deleteModalOpen}
+        message="Delete this brand?"
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+      />
     </div>
   );
 }

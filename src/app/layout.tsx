@@ -21,7 +21,26 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         {children}
-        <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+        <Toaster position="top-right" toastOptions={{ duration: 3000,
+          success: {
+            style: {
+              border:      '1px solid #10B981',
+              background:  '#ECFDF3',
+              color:       '#047857',
+              borderRadius:'50px',
+              padding:     '12px 16px',
+            },
+          },
+          error: {
+            style: {
+              border:      '1px solid #EF4444',
+              background:  '#FEF2F2',
+              color:       '#B91C1C',
+              borderRadius:'50px',
+              padding:     '12px 16px',
+            },
+          },
+         }} />
         <script dangerouslySetInnerHTML={{
           __html: `
             // Fix for editor initialization issues

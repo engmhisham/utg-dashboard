@@ -52,20 +52,14 @@ const Dashboard: FC<DashboardProps> = ({ project, budgetData, deals }) => {
                   >
                     {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
                   </button>
-                  <Link href="/" className="p-1">
-                    <ChevronLeft size={20} />
-                  </Link>
                   <h1 className="text-xl font-medium flex items-center">
-                  <LayoutDashboard size={22} className="mr-2" />
+                  <LayoutDashboard size={22} className="mr-2 ml-2" />
                     Dashboard</h1>
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
-                  <button className="hover:text-gray-700">
-                    <ArrowLeft size={20} />
-                  </button>
                   <div className="flex items-center space-x-1">
                     <span className="flex items-center">
                     <LayoutDashboard size={22} className="mr-2" />

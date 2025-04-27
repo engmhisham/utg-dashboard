@@ -43,7 +43,7 @@ export default function UserCreatePage() {
         body: JSON.stringify(form)
       });
       if (!r.ok) throw new Error((await r.json()).message || 'Failed');
-      toast.success('User created ✅');
+      toast.success('User created!');
       router.push('/users');
     } catch (err: any) {
       toast.error(err.message || 'Error');

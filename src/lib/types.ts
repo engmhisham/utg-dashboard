@@ -32,3 +32,17 @@ export interface Blog {
   createdAt:     string;
   updatedAt:     string;
 }
+
+export interface MediaItem {
+  id: string;
+  filename: string;
+  originalname: string;
+  mimetype: string;
+  path: string;
+  size: number;
+  width?: number;
+  height?: number;
+  alt?: string;
+  title?: string;
+  createdAt: string;
+}

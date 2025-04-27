@@ -19,6 +19,7 @@ import {
 import Link from 'next/link';
 import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
+import ConfirmModal from '@/src/components/ConfirmModal';
 
 const categories = [
   { id: 'general', name: 'General' },
@@ -37,8 +38,36 @@ export default function FAQsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [language, setLanguage] = useState<'en' | 'ar'>('en');
   const [loading, setLoading] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [faqToDelete, setFaqToDelete] = useState<string | null>(null);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+  const openDeleteModal = (id: string) => {
+    setFaqToDelete(id);
+    setDeleteModalOpen(true);
+  };
+  const closeDeleteModal = () => {
+    setFaqToDelete(null);
+    setDeleteModalOpen(false);
+  };
+  const confirmDelete = async () => {
+    if (!faqToDelete) return;
+    const token = Cookies.get('accessToken');
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/faqs/${faqToDelete}`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error();
+      setFaqs(faqs.filter(f => f.id !== faqToDelete));
+      toast.success('FAQ deleted');
+    } catch {
+      toast.error('Failed to delete FAQ');
+    } finally {
+      closeDeleteModal();
+    }
+  };
 
   // viewport check
   useEffect(() => {
@@ -223,7 +252,7 @@ export default function FAQsPage() {
                       <button
                         onClick={e => {
                           e.stopPropagation();
-                          handleDelete(faq.id);
+                          openDeleteModal(faq.id);
                         }}
                         className="text-gray-400 hover:text-red-600"
                       >
@@ -249,6 +278,12 @@ export default function FAQsPage() {
           </div>
         </div>
       </main>
+      <ConfirmModal
+        show={deleteModalOpen}
+        message="Are you sure you want to delete this FAQ?"
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/src/components/LoadingSpinner';
+import ConfirmModal from '@/src/components/ConfirmModal';
 
 interface User {
   id: string;
@@ -25,6 +26,8 @@ export default function UsersPage() {
   const [isMobile,    setIsMobile]    = useState(false);
   const [loading,     setLoading]     = useState(true);
   const [users,       setUsers]       = useState<User[]>([]);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const fx = () => setIsMobile(window.innerWidth < 768);
@@ -54,7 +57,34 @@ export default function UsersPage() {
   const handleEdit = (id: string) => {
     router.push(`/users/edit/${id}`);
   };
+// fire off the modal
+const openDeleteModal = (id: string) => {
+  setUserToDelete(id);
+  setDeleteModalOpen(true);
+};
+const closeDeleteModal = () => {
+  setUserToDelete(null);
+  setDeleteModalOpen(false);
+};
 
+// when user clicks “Delete” in modal
+const confirmDelete = async () => {
+  if (!userToDelete) return;
+  try {
+    const token = Cookies.get('accessToken');
+    const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userToDelete}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!r.ok) throw new Error('Delete failed');
+    setUsers(prev => prev.filter(u => u.id !== userToDelete));
+    toast.success('User deleted');
+  } catch (e: any) {
+    toast.error(e.message || 'Error');
+  } finally {
+    closeDeleteModal();
+  }
+};
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this user?')) return;
     try {
@@ -114,7 +144,7 @@ export default function UsersPage() {
         </div>
 
         {/* table */}
-        <div className="mx-auto max-w-5xl px-4 pb-24">
+        <div className="hidden md:block mx-auto max-w-5xl px-4 pb-24">
           <div className="bg-white rounded-xl shadow-sm border overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -167,7 +197,7 @@ export default function UsersPage() {
                             <PencilLine size={16} />
                           </button>
                           <button
-                            onClick={e => { e.stopPropagation(); handleDelete(u.id); }}
+                            onClick={e => { e.stopPropagation(); openDeleteModal(u.id); }}
                             className="text-red-600 hover:text-red-900"
                           >
                             <Trash2 size={16} />
@@ -187,6 +217,64 @@ export default function UsersPage() {
             </table>
           </div>
         </div>
+        {/* Mobile Cards */}
+        <div className="md:hidden space-y-4 px-4 pb-24">
+          {loading ? (
+            <div className="py-8 text-center">
+              <LoadingSpinner className="h-8 w-8 text-gray-400 mx-auto" />
+            </div>
+          ) : users.length > 0 ? (
+            users.map(u => (
+              <div
+                key={u.id}
+                className="bg-white rounded-xl border shadow-sm p-4 cursor-pointer"
+                onClick={() => handleEdit(u.id)}
+              >
+                {/* row header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-sm font-medium text-gray-900">{u.username}</div>
+                  <div className="text-xs text-gray-500">
+                    {new Date(u.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+                {/* email */}
+                <div className="text-sm text-blue-600 mb-2">{u.email}</div>
+                {/* role */}
+                <div className="text-sm text-gray-700 mb-4">
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                    {u.role}
+                  </span>
+                </div>
+                {/* actions */}
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={e => { e.stopPropagation(); handleEdit(u.id); }}
+                    className="text-indigo-600 hover:text-indigo-900"
+                  >
+                    <PencilLine size={16} />
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); openDeleteModal(u.id); }}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-12 bg-white rounded-xl border shadow-sm">
+              <p className="text-gray-500">No users found.</p>
+            </div>
+          )}
+        </div>
+
+        <ConfirmModal
+          show={deleteModalOpen}
+          message="Delete this user?"
+          onConfirm={confirmDelete}
+          onCancel={closeDeleteModal}
+        />
       </main>
     </div>
   );

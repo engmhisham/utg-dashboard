@@ -82,7 +82,7 @@ export default function UserEditPage() {
         body: JSON.stringify(body)
       });
       if (!r.ok) throw new Error((await r.json()).message || 'Failed');
-      toast.success('User updated ✅');
+      toast.success('User   updated');
       router.push('/users');
     } catch (err: any) {
       toast.error(err.message || 'Error');

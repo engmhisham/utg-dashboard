@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Client } from '@/src/lib/types';
+import ConfirmModal from '@/src/components/ConfirmModal';
+import { getImgSrc } from '@/src/utils/getImgSrc';
 
 export default function ClientsPage() {
   const router = useRouter();
@@ -30,6 +32,35 @@ export default function ClientsPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen]   = useState(false);
+  const [clientToDelete, setClientToDelete]     = useState<string | null>(null);
+
+  // open / close / confirm logic
+  const openDeleteModal = (id: string) => {
+    setClientToDelete(id);
+    setDeleteModalOpen(true);
+  };
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setClientToDelete(null);
+  };
+  const confirmDelete = async () => {
+    if (!clientToDelete) return;
+    try {
+      const token = Cookies.get('accessToken');
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/clients/${clientToDelete}`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error('Delete failed');
+      setClients(prev => prev.filter(c => c.id !== clientToDelete));
+    } catch (err) {
+      console.error(err);
+      alert('Delete failed');
+    } finally {
+      closeDeleteModal();
+    }
+  };
 
   // detect mobile viewport
   useEffect(() => {
@@ -113,6 +144,8 @@ export default function ClientsPage() {
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
           <div className="p-4 md:p-6 flex items-center justify-between">
             {isMobile ? (
+              <div className="flex items-center justify-between w-full px-4 py-2">
+              {/* Left group */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSidebarOpen(o => !o)}
@@ -127,13 +160,17 @@ export default function ClientsPage() {
                   <UsersRound size={22} className="mr-2" />
                   Clients
                 </h1>
-                <button
-                  onClick={() => router.push('/clients/create')}
-                  className="ml-auto p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-                >
-                  <Plus size={18} />
-                </button>
               </div>
+            
+              {/* Right “+” button */}
+              <button
+                onClick={() => router.push('/clients/create')}
+                className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+              >
+                <Plus size={18} />
+              </button>
+            </div>
+            
             ) : (
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center">
@@ -189,17 +226,6 @@ export default function ClientsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 text-blue-600"
-                      checked={
-                        selectedClients.length === filteredClients.length &&
-                        filteredClients.length > 0
-                      }
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Client
                   </th>
@@ -236,25 +262,11 @@ export default function ClientsPage() {
                       className="hover:bg-gray-50 cursor-pointer"
                       onClick={() => handleEdit(client.id)}
                     >
-                      <td
-                        className="px-6 py-4"
-                        onClick={e => {
-                          e.stopPropagation();
-                          toggleSelect(client.id);
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 text-blue-600"
-                          checked={selectedClients.includes(client.id)}
-                          readOnly
-                        />
-                      </td>
                       <td className="px-6 py-4 flex items-center">
                         <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
                           {client.logoUrl ? (
                             <img
-                              src={client.logoUrl}
+                              src={getImgSrc(client.logoUrl)}
                               alt={client.title}
                               className="h-full w-full object-cover"
                             />
@@ -281,7 +293,7 @@ export default function ClientsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`px-2 inline-flex text-xs font-semibold rounded-full ${
+                          className={`p-2 inline-flex text-xs font-semibold rounded-full ${
                             client.status === 'active'
                               ? 'bg-green-100 text-green-800'
                               : 'bg-gray-100 text-gray-800'
@@ -310,7 +322,10 @@ export default function ClientsPage() {
                           <PencilLine size={16} />
                         </button>
                         <button
-                          onClick={() => handleDelete(client.id)}
+                          onClick={e => {
+                            e.stopPropagation();
+                            openDeleteModal(client.id);
+                          }}
                           className="text-red-600 hover:text-red-900"
                         >
                           <Trash2 size={16} />
@@ -339,10 +354,89 @@ export default function ClientsPage() {
               filteredClients.map(client => (
                 <div
                   key={client.id}
-                  className="bg-white rounded-xl border shadow-sm p-4 cursor-pointer"
+                  className="bg-white rounded-xl border shadow-sm cursor-pointer"
                   onClick={() => handleEdit(client.id)}
                 >
                   {/* ...your existing mobile card markup... */}
+                  <div
+                    key={client.id}
+                    className="bg-white rounded-xl border shadow-sm p-4 cursor-pointer"
+                    onClick={() => handleEdit(client.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+                          {client.logoUrl ? (
+                            <img
+                              src={getImgSrc(client.logoUrl)}
+                              alt={client.title}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <ImageIcon size={20} className="text-gray-400" />
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {client.title}
+                        </span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleEdit(client.id);
+                          }}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          <PencilLine size={16} />
+                        </button>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            openDeleteModal(client.id);
+                          }}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="mt-2 text-sm text-gray-500 truncate">
+                      {client.description}
+                    </p>
+
+                    <a
+                      href={client.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="mt-2 block text-sm text-blue-600 truncate"
+                    >
+                      {client.url}
+                    </a>
+
+                    <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+                      <span
+                        className={`p-2 py-1 rounded-full ${client.status === 'active'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                          }`}
+                      >
+                        {client.status}
+                      </span>
+                      <span>
+                        {client.createdAt
+                          ? new Date(client.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })
+                          : '—'}
+                      </span>
+                    </div>
+                  </div>
+
                 </div>
               ))
             ) : (
@@ -355,6 +449,12 @@ export default function ClientsPage() {
           </div>
         </div>
       </main>
+      <ConfirmModal
+        show={deleteModalOpen}
+        message="Delete this client?"
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+      />
     </div>
   );
 }

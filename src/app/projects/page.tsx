@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Project } from '@/src/lib/types';
+import ConfirmModal from '@/src/components/ConfirmModal';
+import { getImgSrc } from '@/src/utils/getImgSrc';
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -29,6 +31,22 @@ export default function ProjectsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
+
+  const openDeleteModal = (id: string) => {
+    setProjectToDelete(id);
+    setDeleteModalOpen(true);
+  };
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setProjectToDelete(null);
+  };
+  const confirmDelete = async () => {
+    if (!projectToDelete) return;
+    await deleteProject(projectToDelete);
+    closeDeleteModal();
+  };
 
   // Responsive check
   useEffect(() => {
@@ -90,7 +108,6 @@ export default function ProjectsPage() {
 
   // Delete project
   const deleteProject = async (id: string) => {
-    if (!confirm('Delete project?')) return;
     try {
       const token = Cookies.get('accessToken');
       const res = await fetch(
@@ -175,14 +192,6 @@ export default function ProjectsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selected.length === filtered.length && filtered.length > 0}
-                      onChange={toggleAll}
-                      className="h-4 w-4 text-blue-600 border-gray-300"
-                    />
-                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Project
                   </th>
@@ -214,22 +223,11 @@ export default function ProjectsPage() {
                       className="hover:bg-gray-50 cursor-pointer"
                       onClick={() => router.push(`/projects/edit/${pr.id}`)}
                     >
-                      <td
-                        className="px-6 py-4"
-                        onClick={e => { e.stopPropagation(); toggle(pr.id); }}
-                      >
-                        <input
-                          type="checkbox"
-                          readOnly
-                          checked={selected.includes(pr.id)}
-                          className="h-4 w-4 text-blue-600 border-gray-300"
-                        />
-                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
                             {pr.images[0] ? (
-                              <img src={pr.images[0]} alt={pr.title} className="h-full w-full object-cover" />
+                              <img src={getImgSrc(pr.images[0])} alt={pr.title} className="h-full w-full object-cover" />
                             ) : (
                               <ImageIcon size={20} className="text-gray-400" />
                             )}
@@ -263,7 +261,10 @@ export default function ProjectsPage() {
                           <PencilLine size={16} />
                         </button>
                         <button
-                          onClick={() => deleteProject(pr.id)}
+                          onClick={e => {
+                            e.stopPropagation();
+                            openDeleteModal(pr.id);
+                          }}
                           className="text-red-600 hover:text-red-900"
                         >
                           <Trash2 size={16} />
@@ -295,21 +296,50 @@ export default function ProjectsPage() {
                   className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 cursor-pointer"
                   onClick={() => router.push(`/projects/edit/${pr.id}`)}
                 >
-                  <div className="flex items-center mb-2">
-                    <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
-                      {pr.images[0] ? (
-                        <img src={pr.images[0]} alt={pr.title} className="h-full w-full object-cover" />
-                      ) : (
-                        <ImageIcon size={20} className="text-gray-500" />
-                      )}
+                  <div className="flex items-center justify-between mb-2 w-full">
+                    {/* left group */}
+                    <div className="flex items-center">
+                      <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+                        {pr.images[0]
+                          ? <img src={getImgSrc(pr.images[0])} alt={pr.title} className="h-full w-full object-cover" />
+                          : <ImageIcon size={20} className="text-gray-500" />
+                        }
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">
+                        {pr.title}
+                      </span>
                     </div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">{pr.title}</span>
+
+                    {/* right group */}
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          router.push(`/projects/edit/${pr.id}`);
+                        }}
+                        className="text-indigo-600 hover:text-indigo-900"
+                      >
+                        <PencilLine size={16} />
+                      </button>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          openDeleteModal(pr.id);
+                        }}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
+
                   <p className="text-sm text-gray-700 mb-2 line-clamp-2">{pr.description}</p>
                   <a href={pr.url} target="_blank" className="text-sm text-blue-600">
                     {pr.url}
                   </a>
                 </div>
+                
+                
               ))
             ) : (
               <div className="text-center py-12 bg-white rounded-xl shadow-sm border">
@@ -325,6 +355,12 @@ export default function ProjectsPage() {
           </div>
         </div>
       </main>
+      <ConfirmModal
+        show={deleteModalOpen}
+        message="Delete this project?"
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+      />
     </div>
   );
 }

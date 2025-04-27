@@ -1,3 +1,4 @@
+// src/app/blogs/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -18,6 +19,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Blog, BlogStatus } from '@/src/lib/types';
+import { getImgSrc } from '@/src/utils/getImgSrc';
+import ConfirmModal from '@/src/components/ConfirmModal';
 
 export default function BlogsPage() {
   const router = useRouter();
@@ -29,6 +32,38 @@ export default function BlogsPage() {
   const [loading, setLoading]           = useState(true);
   const [isMobile, setIsMobile]         = useState(false);
   const [sidebarOpen, setSidebarOpen]   = useState(false);
+  // modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [blogToDelete, setBlogToDelete] = useState<string | null>(null);
+
+  const openDeleteModal = (id: string) => {
+    setBlogToDelete(id);
+    setDeleteModalOpen(true);
+  };
+  const closeDeleteModal = () => {
+    setBlogToDelete(null);
+    setDeleteModalOpen(false);
+  };
+  const confirmDelete = async () => {
+    if (!blogToDelete) return;
+    try {
+      const token = Cookies.get('accessToken');
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/blogs/${blogToDelete}`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      if (!res.ok) throw new Error();
+      setBlogs(prev => prev.filter(b => b.id !== blogToDelete));
+    } catch {
+      alert('Delete failed!');
+    } finally {
+      closeDeleteModal();
+    }
+  };
+
 
   // viewport check
   useEffect(() => {
@@ -75,7 +110,8 @@ export default function BlogsPage() {
 
   const filtered = blogs.filter(b => {
     const q = searchQuery.toLowerCase();
-    const matchesQ = b.title.toLowerCase().includes(q) || b.description.toLowerCase().includes(q);
+    const matchesQ = b.title.toLowerCase().includes(q) ||
+                     b.description.toLowerCase().includes(q);
     const matchesS = statusFilter === 'all' || b.status === statusFilter;
     return matchesQ && matchesS;
   });
@@ -103,7 +139,6 @@ export default function BlogsPage() {
         toggleSidebar={() => setSidebarOpen(o => !o)}
       />
       <main className="flex-1 overflow-y-auto">
-
         {/* Page Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
           <div className="p-4 md:p-6 flex items-center justify-between">
@@ -162,20 +197,12 @@ export default function BlogsPage() {
             </div>
           </div>
 
-          {/* Desktop Table (header always shown) */}
+          {/* Desktop Table */}
           <div className="hidden md:block bg-white rounded-xl shadow-sm border overflow-hidden mb-6">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selected.length === filtered.length && filtered.length > 0}
-                        onChange={toggleSelectAll}
-                        className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                      />
-                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Title
                     </th>
@@ -210,23 +237,12 @@ export default function BlogsPage() {
                         className="hover:bg-gray-50 cursor-pointer"
                         onClick={() => handleEdit(b.id)}
                       >
-                        <td
-                          className="px-6 py-4"
-                          onClick={e => { e.stopPropagation(); toggleSelect(b.id); }}
-                        >
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4"
-                            checked={selected.includes(b.id)}
-                            readOnly
-                          />
-                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center">
                             <div className="h-10 w-10 bg-gray-200 rounded-full overflow-hidden">
                               {b.coverImageUrl ? (
                                 <img
-                                  src={b.coverImageUrl}
+                                  src={getImgSrc(b.coverImageUrl)}
                                   alt={b.title}
                                   className="object-cover h-full w-full"
                                 />
@@ -243,7 +259,7 @@ export default function BlogsPage() {
                         <td className="px-6 py-4 text-sm text-blue-600">{b.slug}</td>
                         <td className="px-6 py-4">
                           <span
-                            className={`px-2 inline-flex text-xs font-semibold rounded-full ${
+                            className={`p-2 inline-flex text-xs font-semibold rounded-full ${
                               b.status === 'published'
                                 ? 'bg-green-100 text-green-800'
                                 : b.status === 'draft'
@@ -265,7 +281,7 @@ export default function BlogsPage() {
                             <PencilLine size={16} />
                           </button>
                           <button
-                            onClick={() => handleDelete(b.id)}
+                            onClick={e => {e.stopPropagation(); openDeleteModal(b.id)}}
                             className="text-red-600 hover:text-red-900"
                           >
                             <Trash2 size={16} />
@@ -295,39 +311,70 @@ export default function BlogsPage() {
               filtered.map(b => (
                 <div
                   key={b.id}
-                  className="bg-white rounded-xl shadow-sm border p-4 cursor-pointer"
+                  className="bg-white rounded-xl border shadow-sm cursor-pointer"
                   onClick={() => handleEdit(b.id)}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 text-blue-600 mr-2"
-                        checked={selected.includes(b.id)}
-                        onChange={() => toggleSelect(b.id)}
-                      />
-                      <span className="text-sm font-medium text-gray-900">{b.title}</span>
+                  <div className="p-4">
+                    {/* Header row: cover image (or icon), title, edit/delete */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+                          {b.coverImageUrl ? (
+                            <img
+                              src={getImgSrc(b.coverImageUrl)}
+                              alt={b.title}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <ImageIcon size={20} className="text-gray-400" />
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">{b.title}</span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={e => { e.stopPropagation(); handleEdit(b.id); }}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          <PencilLine size={16} />
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); openDeleteModal(b.id); }}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <span className="text-xs text-gray-500">
-                      {new Date(b.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700 line-clamp-2 mb-2">{b.description}</p>
-                  <span className="inline-flex text-xs font-semibold rounded-full px-2 py-1 bg-gray-100 text-gray-800">
-                    {b.status}
-                  </span>
-                  <div className="mt-3 flex justify-end">
-                    <button
-                      onClick={e => { e.stopPropagation(); handleDelete(b.id); }}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+
+                    {/* Description */}
+                    <p className="mt-2 text-sm text-gray-500 line-clamp-2">
+                      {b.description}
+                    </p>
+
+                    {/* Footer row: status badge & date */}
+                    <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
+                      <span
+                        className={`px-2 inline-flex font-semibold rounded-full ${b.status === 'published'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                          }`}
+                      >
+                        {b.status}
+                      </span>
+                      <span>
+                        {new Date(b.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-12 bg-white rounded-xl shadow-sm border">
+              <div className="text-center py-12 bg-white rounded-xl border shadow-sm">
                 <p className="text-gray-500">No blogs match your filters.</p>
                 <button
                   onClick={() => router.push('/blogs/create')}
@@ -338,8 +385,15 @@ export default function BlogsPage() {
               </div>
             )}
           </div>
+
         </div>
       </main>
+      <ConfirmModal
+        show={deleteModalOpen}
+        message="Delete this blog?"
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+      />
     </div>
   );
 }

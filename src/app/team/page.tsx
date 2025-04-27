@@ -18,6 +18,9 @@ import {
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/src/components/LoadingSpinner';
+import ConfirmModal from '@/src/components/ConfirmModal';
+import { get } from 'http';
+import { getImgSrc } from '@/src/utils/getImgSrc';
 
 export default function TeamPage() {
   const router = useRouter();
@@ -30,6 +33,33 @@ export default function TeamPage() {
   const [isMobile, setIsMobile]             = useState(false);
   const [sidebarOpen, setSidebarOpen]       = useState(false);
   const [loading, setLoading]               = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen]   = useState(false);
+  const [memberToDelete, setMemberToDelete]     = useState<string | null>(null);
+  const openDeleteModal = (id: string) => {
+    setMemberToDelete(id);
+    setDeleteModalOpen(true);
+  };
+  const closeDeleteModal = () => {
+    setMemberToDelete(null);
+    setDeleteModalOpen(false);
+  };
+  const confirmDelete = async () => {
+    if (!memberToDelete) return;
+    try {
+      const token = Cookies.get('accessToken');
+      const res = await fetch(`${API_BASE_URL}/team-members/${memberToDelete}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      setTeam(t => t.filter(m => m.id !== memberToDelete));
+      toast.success('Member deleted');
+    } catch {
+      toast.error('Delete failed');
+    } finally {
+      closeDeleteModal();
+    }
+  };
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -99,14 +129,14 @@ export default function TeamPage() {
       });
       if (!res.ok) throw new Error();
       setTeam(prev => prev.filter(m => m.id !== id));
-      toast.success('Deleted ✅');
+      toast.success('Deleted!');
     } catch {
-      toast.error('Delete failed ❌');
+      toast.error('Delete failed!');
     }
   };
 
   const renderStatusBadge = (status: string) => (
-    <span className={`px-2 inline-flex text-xs font-semibold rounded-full ${
+    <span className={`p-2 inline-flex text-xs font-semibold rounded-full ${
       status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
     }`}>
       {status === 'active' ? 'Active' : 'Inactive'}
@@ -129,30 +159,56 @@ export default function TeamPage() {
         {/* Top Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
           <div className="p-4 md:p-6 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              {isMobile && (
+            {isMobile ? (
+              <>
+                {/* Left group: toggle, back arrow, title */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSidebarOpen(o => !o)}
+                    className="p-1 bg-white rounded-full border shadow-sm"
+                  >
+                    {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                  </button>
+                  <Link href="/" className="text-gray-500 hover:text-gray-700">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl font-medium ml-2">
+                    Teams
+                  </h1>
+                </div>
+
+                {/* Right group: “+” button */}
                 <button
-                  onClick={() => setSidebarOpen(o => !o)}
-                  className="p-1 bg-white rounded-full border shadow-sm"
+                  onClick={() => router.push('/team/create')}
+                  className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
                 >
-                  {sidebarOpen ? <X size={20}/> : <Menu size={20}/>}
+                  <Plus size={18} />
                 </button>
-              )}
-              <Link href="/" className="text-gray-500 hover:text-gray-700">
-                <ArrowLeft size={20} />
-              </Link>
-              <h1 className="text-xl md:text-2xl font-semibold flex items-center ml-2">
-                <UsersRound size={22} className="mr-2" /> Team
-              </h1>
-            </div>
-            <button
-              onClick={() => router.push('/team/create')}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-            >
-              <Plus size={18} className="mr-2" /> Add Member
-            </button>
+              </>
+            ) : (
+              <>
+                {/* Left group: back arrow, title */}
+                <div className="flex items-center gap-2">
+                  <Link href="/" className="text-gray-500 hover:text-gray-700">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-2xl font-semibold">
+                    Teams
+                  </h1>
+                </div>
+
+                {/* Right group: “Add Member” button */}
+                <button
+                  onClick={() => router.push('/team/create')}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                >
+                  <Plus size={18} className="mr-2" /> Add Member
+                </button>
+              </>
+            )}
           </div>
         </div>
+
 
         {/* Filters */}
         <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
@@ -187,17 +243,6 @@ export default function TeamPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 text-blue-600"
-                        checked={
-                          selectedMembers.length === filteredMembers.length &&
-                          filteredMembers.length > 0
-                        }
-                        onChange={toggleSelectAll}
-                      />
-                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -219,23 +264,12 @@ export default function TeamPage() {
                         className="hover:bg-gray-50 cursor-pointer"
                         onClick={() => handleEdit(member.id)}
                       >
-                        <td
-                          className="px-6 py-4"
-                          onClick={e => { e.stopPropagation(); toggleSelection(member.id); }}
-                        >
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 text-blue-600"
-                            checked={selectedMembers.includes(member.id)}
-                            readOnly
-                          />
-                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center">
                             <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
                               {member.coverImageUrl ? (
                                 <img
-                                  src={member.coverImageUrl}
+                                  src={getImgSrc(member.coverImageUrl)}
                                   alt={member.name}
                                   className="h-full w-full object-cover"
                                 />
@@ -261,7 +295,11 @@ export default function TeamPage() {
                           <button onClick={() => handleEdit(member.id)} className="text-indigo-600 hover:text-indigo-900 mr-2">
                             <PencilLine size={16} />
                           </button>
-                          <button onClick={() => handleDelete(member.id)} className="text-red-600 hover:text-red-900">
+                          <button onClick={e => {
+                            e.stopPropagation(); 
+                            openDeleteModal(member.id);
+                            }} 
+                            className="text-red-600 hover:text-red-900">
                             <Trash2 size={16} />
                           </button>
                         </td>
@@ -289,10 +327,63 @@ export default function TeamPage() {
               filteredMembers.map(member => (
                 <div
                   key={member.id}
-                  className="bg-white rounded-xl border shadow-sm p-4 cursor-pointer"
+                  className="bg-white rounded-xl border shadow-sm cursor-pointer"
                   onClick={() => handleEdit(member.id)}
                 >
-                  {/* ...your existing mobile card markup here */}
+                  <div
+                    key={member.id}
+                    className="bg-white rounded-xl border shadow-sm p-4 cursor-pointer"
+                    onClick={() => handleEdit(member.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+                          {member.coverImageUrl ? (
+                            <img
+                              src={getImgSrc(member.coverImageUrl)}
+                              alt={member.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <ImageIcon size={20} className="text-gray-400" />
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {member.name}
+                        </span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleEdit(member.id);
+                          }}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          <PencilLine size={16} />
+                        </button>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            openDeleteModal(member.id);
+                          }}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="mt-2 text-sm text-gray-500">
+                      {member.title}
+                    </p>
+
+                    <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
+                      {renderStatusBadge(member.status)}
+                      <span>{renderDate(member.createdAt)}</span>
+                    </div>
+                  </div>
+
                 </div>
               ))
             ) : (
@@ -309,6 +400,12 @@ export default function TeamPage() {
           </div>
         </div>
       </main>
+      <ConfirmModal
+        show={deleteModalOpen}
+        message="Delete this member?"
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+      />
     </div>
   );
 }

@@ -18,6 +18,8 @@ import {
 import Link from 'next/link';
 import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
+import ConfirmModal from '@/src/components/ConfirmModal';
+import { getImgSrc } from '@/src/utils/getImgSrc';
 
 export default function TestimonialsPage() {
   const router = useRouter();
@@ -30,9 +32,41 @@ export default function TestimonialsPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [testimonialToDelete, setTestimonialToDelete] = useState<string | null>(null);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+  // Helper to open modal
+  function openDeleteModal(id: string) {
+    setTestimonialToDelete(id);
+    setDeleteModalOpen(true);
+  }
+
+  // Helper to close modal
+  function closeDeleteModal() {
+    setTestimonialToDelete(null);
+    setDeleteModalOpen(false);
+  }
+
+  // Actually perform delete
+  async function confirmDelete() {
+    if (!testimonialToDelete) return;
+    const token = Cookies.get('accessToken');
+    try {
+      const res = await fetch(`${API_BASE_URL}/testimonials/${testimonialToDelete}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error();
+      setTestimonials(prev => prev.filter(t => t.id !== testimonialToDelete));
+      toast.success('Deleted successfully');
+    } catch {
+      toast.error('Failed to delete');
+    } finally {
+      closeDeleteModal();
+    }
+  }
   // viewport check
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -116,30 +150,53 @@ export default function TestimonialsPage() {
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
           <div className="p-4 md:p-6 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              {isMobile && (
+            {isMobile ? (
+              <>
+                {/* Left group: toggle, back arrow, title */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSidebarOpen(o => !o)}
+                    className="p-1 bg-white rounded-full border shadow-sm"
+                  >
+                    {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                  </button>
+                  <Link href="/" className="text-gray-500 hover:text-gray-700">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl font-medium ml-2">
+                    Testimonials
+                  </h1>
+                </div>
+
+                {/* Right group: “+” button */}
                 <button
-                  onClick={() => setSidebarOpen(o => !o)}
-                  className="p-1 bg-white rounded-full border shadow-sm"
+                  onClick={() => router.push('/testimonials/create')}
+                  className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
                 >
-                  {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                  <Plus size={18} />
                 </button>
-              )}
-              <Link href="/" className="text-gray-500 hover:text-gray-700">
-                <ArrowLeft size={20} />
-              </Link>
-              <h1 className="text-xl md:text-2xl font-semibold flex items-center ml-2">
-                <BookCopy className="mr-2" size={22} />
-                Testimonials
-              </h1>
-            </div>
-            <button
-              onClick={() => router.push('/testimonials/create')}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-            >
-              <Plus size={18} className="mr-2" />
-              Add Testimonial
-            </button>
+              </>
+            ) : (
+              <>
+                {/* Left group: back arrow, title */}
+                <div className="flex items-center gap-2">
+                  <Link href="/" className="text-gray-500 hover:text-gray-700">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-2xl font-semibold">
+                    Testimonials
+                  </h1>
+                </div>
+
+                {/* Right group: “Add Member” button */}
+                <button
+                  onClick={() => router.push('/testimonials/create')}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                >
+                  <Plus size={18} className="mr-2" /> Add Testimonial
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -175,14 +232,6 @@ export default function TestimonialsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 text-blue-600 rounded border-gray-300"
-                      checked={selectedTestimonials.length === filtered.length && filtered.length > 0}
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Person
                   </th>
@@ -216,25 +265,11 @@ export default function TestimonialsPage() {
                       className="hover:bg-gray-50 cursor-pointer"
                       onClick={() => handleEdit(t.id)}
                     >
-                      <td
-                        className="px-6 py-4"
-                        onClick={e => {
-                          e.stopPropagation();
-                          toggleSelect(t.id);
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedTestimonials.includes(t.id)}
-                          readOnly
-                          className="h-4 w-4 text-blue-600 rounded border-gray-300"
-                        />
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
                             {t.coverImageUrl ? (
-                              <img src={t.coverImageUrl} alt={t.name} className="h-full w-full object-cover" />
+                              <img src={getImgSrc(t.coverImageUrl)} alt={t.name} className="h-full w-full object-cover" />
                             ) : (
                               <Users className="text-gray-500" size={20} />
                             )}
@@ -248,7 +283,7 @@ export default function TestimonialsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">{t.company}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-2 inline-flex text-xs font-semibold rounded-full ${
+                          className={`p-2 inline-flex text-xs font-semibold rounded-full ${
                             t.status === 'published'
                               ? 'bg-green-100 text-green-800'
                               : 'bg-yellow-100 text-yellow-800'
@@ -275,7 +310,7 @@ export default function TestimonialsPage() {
                           <PencilLine size={16} />
                         </button>
                         <button
-                          onClick={() => handleDelete(t.id)}
+                          onClick={e => { e.stopPropagation(); openDeleteModal(t.id); }}
                           className="text-red-600 hover:text-red-900"
                         >
                           <Trash2 size={16} />
@@ -297,70 +332,104 @@ export default function TestimonialsPage() {
           {/* Mobile Cards */}
           <div className="md:hidden space-y-4">
             {loading ? (
-              <div className="flex justify-center py-8">
-                <LoadingSpinner className="h-8 w-8 text-gray-400" />
+              <div className="py-8 text-center">
+                <LoadingSpinner className="h-8 w-8 text-gray-400 mx-auto" />
               </div>
             ) : filtered.length > 0 ? (
               filtered.map(t => (
                 <div
                   key={t.id}
-                  className="bg-white rounded-xl shadow-sm border p-4 cursor-pointer"
+                  className="bg-white rounded-xl border shadow-sm cursor-pointer"
                   onClick={() => handleEdit(t.id)}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
-                        {t.coverImageUrl ? (
-                          <img src={t.coverImageUrl} alt={t.name} className="h-full w-full object-cover" />
-                        ) : (
-                          <Users className="text-gray-500" size={20} />
-                        )}
+                  {/* inner padded card */}
+                  <div className="p-4">
+                    {/* header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+                          {t.coverImageUrl ? (
+                            <img
+                              src={getImgSrc(t.coverImageUrl)}
+                              alt={t.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <Users className="text-gray-400" size={20} />
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {t.name}
+                        </span>
                       </div>
-                      <div className="ml-3">
-                        <div className="text-sm font-medium text-gray-900">{t.name}</div>
-                        <div className="text-sm text-gray-500">{t.position}</div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={e => { e.stopPropagation(); handleEdit(t.id); }}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          <PencilLine size={16} />
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); openDeleteModal(t.id); }}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </div>
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        t.status === 'published'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      {t.status}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-700 mb-2">
-                    <strong>Company:</strong> {t.company}
-                  </div>
-                  <div className="text-sm text-gray-700 mb-3 line-clamp-2">
-                    {t.content}
-                  </div>
-                  <div className="flex justify-end space-x-3">
-                    <button
-                      className="text-indigo-600 hover:text-indigo-900"
-                      onClick={e => { e.stopPropagation(); handleEdit(t.id); }}
-                    >
-                      <PencilLine size={16} />
-                    </button>
-                    <button
-                      className="text-red-600 hover:text-red-900"
-                      onClick={e => { e.stopPropagation(); handleDelete(t.id); }}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+
+                    {/* company */}
+                    <p className="mt-2 text-sm text-gray-500">
+                      <strong>Company:</strong> {t.company}
+                    </p>
+
+                    {/* content */}
+                    <p className="mt-2 text-sm text-gray-500 line-clamp-2">
+                      {t.content}
+                    </p>
+
+                    {/* footer */}
+                    <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
+                      <span
+                        className={`px-2 inline-flex font-semibold rounded-full ${t.status === 'published'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                          }`}
+                      >
+                        {t.status}
+                      </span>
+                      <span>
+                        {new Date(t.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-12 bg-white rounded-xl shadow-sm border">
+              <div className="text-center py-12 bg-white rounded-xl border shadow-sm">
                 <p className="text-gray-500">No testimonials found.</p>
+                <button
+                  onClick={() => router.push('/testimonials/create')}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+                >
+                  Add Testimonial
+                </button>
               </div>
             )}
           </div>
+
         </div>
       </main>
+      <ConfirmModal
+        show={deleteModalOpen}
+        message="Delete this testimonial?"
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+      />
     </div>
   );
 }

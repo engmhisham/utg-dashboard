@@ -1,269 +1,418 @@
+// src/app/brands/edit/[id]/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import Sidebar from '../../../../components/Sidebar';
-import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
-import toast from 'react-hot-toast';
+import LoadingSpinner from '@/src/components/LoadingSpinner';
 import {
   ArrowLeft,
   Box,
-  Check,
   Menu,
-  Upload,
   X,
+  Upload,
+  Check,
   Image as ImageIcon,
 } from 'lucide-react';
 import Link from 'next/link';
+import Cookies from 'js-cookie';
+import toast from 'react-hot-toast';
+import { getImgSrc } from '@/src/utils/getImgSrc';
 
-export default function BrandEditPage({ params }: { params: { id: string } }) {
+type Lang = 'en' | 'ar';
+
+export default function BrandEditPage() {
   const router = useRouter();
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-  const brandId = params.id;
+  const { id: brandId } = useParams<{ id: string }>();
+  const API = process.env.NEXT_PUBLIC_API_URL!;
 
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    status: 'inactive',
-    logo: '',
+  // form state
+  const [form, setForm] = useState({
+    status:         'inactive',
+    logoUrl:        '',    // full URL (existing or uploaded)
+    title_en:       '',
+    description_en: '',
+    title_ar:       '',
+    description_ar: '',
   });
 
-  const [loading, setLoading] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // deferred‐logo state
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl]   = useState<string | null>(null);
 
-  // Check if mobile
+  const [activeLang, setActiveLang]   = useState<Lang>('en');
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [saving, setSaving]           = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile]       = useState(false);
+
+  // generic setter
+  const setField = <K extends keyof typeof form>(key: K, val: typeof form[K]) =>
+    setForm(f => ({ ...f, [key]: val }));
+
+  // mobile detection
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Fetch brand data on mount
+  // fetch existing brand
   useEffect(() => {
-    const fetchBrand = async () => {
-      const token = Cookies.get('accessToken');
+    (async () => {
       try {
-        const res = await fetch(`${API_URL}/brands/${brandId}?language=en`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const token = Cookies.get('accessToken');
+        const res = await fetch(`${API}/brands/${brandId}?language=en`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
+        if (!res.ok) throw new Error();
+        const { data } = await res.json();
 
-        const json = await res.json();
-        const brand = json.data;
-
-        setFormData({
-          title: brand.name || '',
-          description: brand.description || '',
-          status: brand.status || 'inactive',
-          logo: brand.logoUrl || '',
+        setForm({
+          status:         data.status,
+          logoUrl:        data.logoUrl,
+          title_en:       data.name,
+          description_en: data.description,
+          title_ar:       data.name,
+          description_ar: data.description,
         });
-      } catch (err) {
-        console.error(err);
-        toast.error('Failed to load brand');
+        // show existing logo as preview
+        setPreviewUrl(data.logoUrl);
+      } catch {
+        toast.error('Failed to load brand!');
+        router.push('/brands');
       } finally {
-        setLoading(false);
+        setInitialLoading(false);
       }
-    };
+    })();
+  }, [brandId, router, API]);
 
-    fetchBrand();
-  }, [brandId]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // 1️⃣ deferred file select → preview only
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setPendingFile(file);
+    setPreviewUrl(file ? URL.createObjectURL(file) : form.logoUrl || null);
   };
 
+  // 2️⃣ upload helper (same as blog pages)
+  const uploadImage = async (file: File, token: string): Promise<string> => {
+    const fd = new FormData();
+    fd.append('file', file);
+
+    const res = await fetch(`${API}/media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Media upload failed');
+    }
+    const { data: media } = await res.json();
+    return `${API}/${media.path}`;
+  };
+
+  // 3️⃣ on submit: first upload logo if new, then patch
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const token = Cookies.get('accessToken');
-
-    const payload = {
-      name_en: formData.title,
-      description_en: formData.description,
-      name_ar: formData.title,
-      description_ar: formData.description,
-      logoUrl: formData.logo,
-    };
+    setSaving(true);
 
     try {
-      const res = await fetch(`${API_URL}/brands/${brandId}`, {
-        method: 'PATCH',
+      const token = Cookies.get('accessToken');
+      if (!token) throw new Error('Not authenticated');
+
+      // upload pendingFile if present
+      let logoUrl = form.logoUrl;
+      if (pendingFile) {
+        logoUrl = await uploadImage(pendingFile, token);
+      }
+
+      const payload = {
+        status:           form.status,
+        logoUrl,                             // final URL
+        name_en:          form.title_en,
+        description_en:   form.description_en,
+        name_ar:          form.title_ar,
+        description_ar:   form.description_ar,
+      };
+
+      const res = await fetch(`${API}/brands/${brandId}`, {
+        method:  'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization:  `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
-
-      if (!res.ok) throw new Error('Update failed');
-      toast.success('Brand updated successfully ✅');
+      if (!res.ok) throw new Error();
+      toast.success('Brand updated successfully!');
       router.push('/brands');
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to update brand ❌');
+    } catch {
+      toast.error('Update failed!');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleCancel = () => {
-    router.push('/brands');
-  };
+  const handleCancel = () => router.push('/brands');
 
-  if (loading) {
-    return <div className="p-8 text-gray-500">Loading brand data...</div>;
+  if (initialLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <LoadingSpinner className="h-8 w-8 text-gray-400" />
+      </div>
+    );
   }
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        toggleSidebar={() => setSidebarOpen(o => !o)}
+      />
 
-      <main className="flex-1 overflow-y-auto relative">
+      <main className="flex-1 overflow-y-auto">
+        {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
-          <div className="p-4 md:p-6">
-            {isMobile ? (
-              <div className="flex items-center gap-2">
+          <div className="p-4 md:p-6 flex items-center gap-3">
+            {isMobile && (
+              <button
+                onClick={() => setSidebarOpen(o => !o)}
+                className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+              >
+                {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            )}
+            <Link href="/brands" className="text-gray-500 hover:text-gray-700">
+              <ArrowLeft size={20} />
+            </Link>
+            <h1 className="text-xl md:text-2xl font-semibold ml-2 flex items-center">
+              <Box size={22} className="mr-2" />
+              Edit Brand
+            </h1>
+          </div>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="mx-auto max-w-4xl space-y-6 px-4 pb-24"
+        >
+          {/* Status */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h2 className="text-lg font-medium mb-4">Status</h2>
+            <div className="flex items-center space-x-4">
+              {['active', 'inactive'].map(s => (
+                <label key={s} className="inline-flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status"
+                    value={s}
+                    checked={form.status === s}
+                    onChange={e => setField('status', e.target.value)}
+                    className="sr-only"
+                  />
+                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                    form.status === s
+                      ? 'bg-blue-500 border-blue-500'
+                      : 'border-gray-300'
+                  }`}>
+                    {form.status === s && <Check size={12} className="text-white" />}
+                  </div>
+                  <span className="ml-2 capitalize">{s}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Logo (deferred upload) */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h2 className="text-lg font-medium mb-4">Logo</h2>
+            <div className="border rounded-lg p-4 bg-gray-50 relative">
+              {(previewUrl) ? (
+                <div className="relative max-w-xs mx-auto">
+                  <img
+                    src={getImgSrc(previewUrl)}
+                    alt="Logo preview"
+                    className="max-w-full h-auto max-h-64 mx-auto"
+                  />
+                  <div className="absolute top-2 right-2 flex space-x-2">
+                    {/* Re-upload */}
+                    <label
+                      htmlFor="logoUpload"
+                      className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md cursor-pointer"
+                    >
+                      <Upload size={16} className="text-gray-600" />
+                      <input
+                        id="logoUpload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                    {/* Remove */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingFile(null);
+                        setPreviewUrl(null);
+                        setField('logoUrl', '');
+                      }}
+                      className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md"
+                    >
+                      <X size={16} className="text-gray-600" />
+                    </button>
+                  </div>
+                  <div className="absolute bottom-4 left-4 bg-white bg-opacity-80 px-2 py-1 rounded text-sm">
+                    {(activeLang==='en' ? form.title_en : form.title_ar) || 'Brand'} Logo
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                    <ImageIcon size={32} className="text-gray-400" />
+                  </div>
+                  <p className="text-gray-500 mb-4 text-center">Upload a logo</p>
+                  <label
+                    htmlFor="logoUpload"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+                  >
+                    Upload Logo
+                    <input
+                      id="logoUpload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bilingual Name & Description */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <div className="flex border-b mb-6 space-x-6">
+              {(['en','ar'] as Lang[]).map(l => (
                 <button
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="p-1 rounded-full bg-white shadow-md border border-gray-200"
+                  key={l}
+                  type="button"
+                  onClick={() => setActiveLang(l)}
+                  className={`pb-2 ${
+                    activeLang===l
+                      ? 'border-b-2 border-blue-600 font-medium'
+                      : 'text-gray-500'
+                  }`}
                 >
-                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                  {l.toUpperCase()}
                 </button>
-                <Link href="/brands" className="text-gray-500 hover:text-gray-700">
-                  <ArrowLeft size={20} />
-                </Link>
-                <h1 className="text-xl font-medium ml-2 flex items-center">
-                  <Box size={22} className="mr-2" />
-                  Edit Brand
-                </h1>
+              ))}
+            </div>
+
+            {activeLang==='en' ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Brand Name (EN) <span className="text-blue-500">*</span>
+                  </label>
+                  <input
+                    name="title_en"
+                    value={form.title_en}
+                    onChange={e => setField('title_en', e.target.value)}
+                    required
+                    className="w-full border rounded-lg p-3"
+                    dir="ltr"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Description (EN)
+                  </label>
+                  <textarea
+                    name="description_en"
+                    value={form.description_en}
+                    onChange={e => setField('description_en', e.target.value)}
+                    rows={4}
+                    className="w-full border rounded-lg p-3"
+                    dir="ltr"
+                  />
+                </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Link href="/brands" className="text-gray-500 hover:text-gray-700 mr-2">
-                    <ArrowLeft size={20} />
-                  </Link>
-                  <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-                    <Box size={22} className="mr-2" />
-                    Edit Brand
-                  </h1>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-right">
+                    Brand Name (AR) <span className="text-blue-500">*</span>
+                  </label>
+                  <input
+                    name="title_ar"
+                    value={form.title_ar}
+                    onChange={e => setField('title_ar', e.target.value)}
+                    required
+                    className="w-full border rounded-lg p-3"
+                    dir="rtl"
+                  />
                 </div>
-                <div className="flex space-x-3">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    onClick={handleSubmit}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-                  >
-                    Save
-                  </button>
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-right">
+                    Description (AR)
+                  </label>
+                  <textarea
+                    name="description_ar"
+                    value={form.description_ar}
+                    onChange={e => setField('description_ar', e.target.value)}
+                    rows={4}
+                    className="w-full border rounded-lg p-3"
+                    dir="rtl"
+                  />
                 </div>
               </div>
             )}
           </div>
-        </div>
 
-        <div className="mx-auto max-w-4xl px-4 pb-24 md:pb-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Status */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <h2 className="text-lg font-medium mb-4">Status</h2>
-              <div className="flex items-center space-x-4">
-                {['active', 'inactive'].map((status) => (
-                  <label key={status} className="inline-flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="status"
-                      value={status}
-                      checked={formData.status === status}
-                      onChange={handleInputChange}
-                      className="sr-only"
-                    />
-                    <div
-                      className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                        formData.status === status ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
-                      }`}
-                    >
-                      {formData.status === status && <Check size={12} className="text-white" />}
-                    </div>
-                    <span className="ml-2 capitalize">{status}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+          {/* Actions */}
+          <div className="hidden md:flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 flex items-center"
+            >
+              {saving
+                ? <LoadingSpinner className="h-5 w-5 text-white" />
+                : 'Save'}
+            </button>
+          </div>
 
-            {/* Logo */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <h2 className="text-lg font-medium mb-4">Logo</h2>
-              <div className="border rounded-lg p-4 bg-gray-50 relative">
-                {formData.logo ? (
-                  <div className="relative">
-                    <img src={formData.logo} alt="Brand Logo" className="max-w-full h-auto max-h-64 mx-auto" />
-                    <div className="absolute top-2 right-2 flex space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => setFormData((prev) => ({ ...prev, logo: '' }))}
-                        className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md"
-                      >
-                        <X size={16} className="text-gray-600" />
-                      </button>
-                    </div>
-                    <div className="absolute bottom-4 left-4 bg-white bg-opacity-80 px-2 py-1 rounded text-sm">
-                      {formData.title} Logo
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                      <ImageIcon size={32} className="text-gray-400" />
-                    </div>
-                    <p className="text-gray-500 mb-4 text-center">Upload a logo</p>
-                    <button type="button" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                      Upload Logo
-                    </button>
-                  </div>
-                )}
-              </div>
+          {isMobile && (
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex space-x-3">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center"
+              >
+                {saving
+                  ? <LoadingSpinner className="h-5 w-5 text-white" />
+                  : 'Save'}
+              </button>
             </div>
-
-            {/* Info */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <h2 className="text-lg font-medium mb-4">Brand Info</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Brand Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    name="description"
-                    rows={4}
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          </form>
-        </div>
+          )}
+        </form>
       </main>
     </div>
   );
