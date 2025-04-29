@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../../../components/Sidebar';
 import LoadingSpinner from '@/src/components/LoadingSpinner';
-import { ArrowLeft, X, Menu, Upload } from 'lucide-react';
+import { ArrowLeft, X, Menu, Upload, Boxes } from 'lucide-react';
 import Link from 'next/link';
 
 type Lang = 'en' | 'ar';
@@ -65,6 +65,7 @@ export default function ProjectCreatePage() {
   const uploadImage = async (file: File, token: string): Promise<string> => {
     const fd = new FormData();
     fd.append('file', file);
+    fd.append('category', 'projects');
     const res = await fetch(`${API_URL}/media`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -75,7 +76,7 @@ export default function ProjectCreatePage() {
       throw new Error(err.message || 'Media upload failed');
     }
     const { data: media } = await res.json();
-    return `${API_URL}/${media.path}`;
+    return media.path;
   };
 
   // submit: upload each pending file, then POST
@@ -153,6 +154,7 @@ export default function ProjectCreatePage() {
                 <Link href="/projects" className="text-gray-500 hover:text-gray-700">
                   <ArrowLeft size={20} />
                 </Link>
+                <Boxes size={24} className="text-gray-500 mr-2" />
                 <h1 className="text-xl font-medium ml-2">Create Project</h1>
               </div>
             ) : (
@@ -163,6 +165,7 @@ export default function ProjectCreatePage() {
                 >
                   <ArrowLeft size={20} />
                 </Link>
+                <Boxes size={24} className="text-gray-500 mr-2" />
                 <h1 className="text-2xl font-semibold">Create Project</h1>
               </div>
             )}

@@ -14,6 +14,7 @@ import {
   X,
   ImageIcon,
   Upload,
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -66,7 +67,7 @@ export default function ClientCreatePage() {
   const uploadImage = async (file: File, token: string): Promise<string> => {
     const fd = new FormData();
     fd.append('file', file);
-
+    fd.append('category', 'clients');
     const res = await fetch(`${API_URL}/media`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -77,7 +78,7 @@ export default function ClientCreatePage() {
       throw new Error(err.message || 'Media upload failed');
     }
     const { data: media } = await res.json();
-    return `${API_URL}/${media.path}`;
+    return media.path;
   };
 
   // 3️⃣ submit: upload logo if needed, then POST client
@@ -154,6 +155,7 @@ export default function ClientCreatePage() {
                 >
                   <ArrowLeft size={20} />
                 </Link>
+                <UsersRound size={24} className="ml-2" />
                 <h1 className="text-xl font-medium ml-2">Create New Client</h1>
               </>
             ) : (
@@ -164,6 +166,7 @@ export default function ClientCreatePage() {
                 >
                   <ArrowLeft size={20} />
                 </Link>
+                <UsersRound size={24} className="mr-2" />
                 <h1 className="text-2xl font-semibold">Create New Client</h1>
               </>
             )}

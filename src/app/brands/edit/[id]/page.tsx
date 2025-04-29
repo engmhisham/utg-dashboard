@@ -99,7 +99,7 @@ export default function BrandEditPage() {
   const uploadImage = async (file: File, token: string): Promise<string> => {
     const fd = new FormData();
     fd.append('file', file);
-
+    fd.append('category', 'brands');
     const res = await fetch(`${API}/media`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -110,7 +110,7 @@ export default function BrandEditPage() {
       throw new Error(err.message || 'Media upload failed');
     }
     const { data: media } = await res.json();
-    return `${API}/${media.path}`;
+    return media.path;
   };
 
   // 3️⃣ on submit: first upload logo if new, then patch

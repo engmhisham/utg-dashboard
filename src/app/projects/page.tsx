@@ -14,6 +14,7 @@ import {
   PencilLine,
   Trash2,
   Image as ImageIcon,
+  Boxes,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Project } from '@/src/lib/types';
@@ -144,7 +145,8 @@ export default function ProjectsPage() {
                 <Link href="/" className="text-gray-500 hover:text-gray-700">
                   <ArrowLeft size={20} />
                 </Link>
-                <h1 className="text-xl font-medium ml-2 flex-1">
+                <Boxes size={24} className="text-gray-500 mr-2" />
+                <h1 className="text-xl font-medium ml-2 flex-1 items-center justify-between">
                   Projects
                 </h1>
                 <button
@@ -160,7 +162,9 @@ export default function ProjectsPage() {
                   <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
                     <ArrowLeft size={20} />
                   </Link>
-                  <h1 className="text-2xl font-semibold">Projects</h1>
+                  <h1 className="text-2xl font-semibold flex items-center">
+                  <Boxes size={24} className="text-gray-500 mr-2" />
+                    Projects</h1>
                 </div>
                 <button
                   onClick={() => router.push('/projects/create')}

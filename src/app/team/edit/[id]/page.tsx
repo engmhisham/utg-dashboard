@@ -97,7 +97,7 @@ export default function TeamEditPage() {
   const uploadImage = async (file: File, token: string): Promise<string> => {
     const fd = new FormData();
     fd.append('file', file);
-
+    fd.append('category', 'team');
     const res = await fetch(`${API_URL}/media`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -108,7 +108,7 @@ export default function TeamEditPage() {
       throw new Error(err.message || 'Media upload failed');
     }
     const { data: media } = await res.json();
-    return `${API_URL}/${media.path}`;
+    return media.path;
   };
 
   // 5️⃣ submit: upload pendingFile then PATCH

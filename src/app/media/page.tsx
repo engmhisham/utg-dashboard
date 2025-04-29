@@ -5,8 +5,10 @@ import { useState, useEffect, useRef } from 'react';
 import Sidebar from '@/src/components/Sidebar';
 import Cookies from 'js-cookie';
 import axios from 'axios';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Folder, Link, ArrowLeft, Image as ImageIcon, ArrowRight, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+
 
 interface MediaItem {
   id: string;
@@ -22,29 +24,32 @@ interface MediaItem {
   createdAt: string;
 }
 
+const FOLDERS = ['blogs', 'brands', 'testimonials', 'team', 'projects', 'clients'];
+
 export default function MediaPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [media, setMedia]           = useState<MediaItem[]>([]);
-  const [page, setPage]             = useState(1);
+  const [media, setMedia] = useState<MediaItem[]>([]);
+  const router = useRouter();
+  const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading]       = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
 
   // Modal state
-  const [selected, setSelected]     = useState<MediaItem | null>(null);
-  const [altText, setAltText]       = useState('');
-  const [titleText, setTitleText]   = useState('');
+  const [selected, setSelected] = useState<MediaItem | null>(null);
+  const [altText, setAltText] = useState('');
+  const [titleText, setTitleText] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch page of media
-  const fetchMedia = async (pageNum = 1) => {
+  const fetchMedia = async (pageNum = 1, folder?: string) => {
     setLoading(true);
     try {
-      const token = Cookies.get('accessToken');const res = await axios.get(
-      `${process.env.NEXT_PUBLIC_API_URL}/media?page=${pageNum}&limit=24`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      const token = Cookies.get('accessToken');
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/media?page=${pageNum}&limit=24${folder ? `&category=${folder}` : ''}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      // if your API wraps every response in a 'data' field, unwrap it:
       const payload = (res.data as any).data ?? res.data;
       const { items = [], totalPages: tp = 1 } = payload;
       setMedia(items);
@@ -58,16 +63,23 @@ export default function MediaPage() {
   };
 
   useEffect(() => {
-    fetchMedia();
-  }, []);
+    if (currentFolder) {
+      fetchMedia(1, currentFolder);
+    }
+  }, [currentFolder]);
 
-  // Upload handler
+  useEffect(() => {
+    if (!currentFolder) {
+      setLoading(false); 
+    }
+  }, [currentFolder]);
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0]) return;
     const file = e.target.files[0];
     const form = new FormData();
     form.append('file', file);
-    // you can also append alt/title here if you have inputs
+    form.append('category', currentFolder || 'general');
     try {
       const token = Cookies.get('accessToken');
       await axios.post(
@@ -80,16 +92,14 @@ export default function MediaPage() {
           },
         }
       );
-      fetchMedia(page);
+      fetchMedia(page, currentFolder || undefined);
     } catch (err) {
       console.error(err);
     } finally {
-      // reset input so same file can be re‐selected if needed
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  // Open modal
   const openModal = (item: MediaItem) => {
     setSelected(item);
     setAltText(item.alt || '');
@@ -97,7 +107,6 @@ export default function MediaPage() {
   };
   const closeModal = () => setSelected(null);
 
-  // Save metadata
   const saveMetadata = async () => {
     if (!selected) return;
     try {
@@ -107,14 +116,13 @@ export default function MediaPage() {
         { alt: altText, title: titleText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      fetchMedia(page);
+      fetchMedia(page, currentFolder || undefined);
       closeModal();
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Delete media
   const deleteMedia = async (id: string) => {
     if (!confirm('Delete this image?')) return;
     try {
@@ -123,14 +131,14 @@ export default function MediaPage() {
         `${process.env.NEXT_PUBLIC_API_URL}/media/${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      // if you deleted the last item on the page, go back a page
       const nextPage = media.length === 1 && page > 1 ? page - 1 : page;
-      fetchMedia(nextPage);
+      fetchMedia(nextPage, currentFolder || undefined);
       closeModal();
     } catch (err) {
       console.error(err);
     }
   };
+  console.log({ currentFolder, media });
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -141,24 +149,42 @@ export default function MediaPage() {
 
       <main className="flex-1 overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Media Library</h1>
-          {/* <div>
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-7 flex items-center gap-3">
+          {currentFolder ? (
             <button
-              onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+              onClick={() => {
+                setCurrentFolder(null);
+                setMedia([]);
+              }}
+              className="text-gray-500 hover:text-gray-700"
             >
-              <Plus size={18} className="mr-2" /> Upload Media
+              <ArrowLeft size={24} />
             </button>
-            <input
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              onChange={handleUpload}
-              className="hidden"
-            />
-          </div> */}
+          ) : (
+            <button
+              onClick={() => router.push('/')}
+              className=" text-gray-500 hover:text-gray-700"
+            >
+              <ArrowLeft size={24} />
+            </button>
+          )}
+
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            {currentFolder ? (
+              <>
+                <ImageIcon size={22} className="text-gray-600" />
+                Media Library <ChevronRight size={16} className="text-gray-600" />
+                {currentFolder}
+              </>
+            ) : (
+              <>
+                <ImageIcon size={22} className="text-gray-600" />
+                Media Library
+              </>
+            )}
+          </h1>
         </div>
+
 
         {/* Grid */}
         <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -166,44 +192,59 @@ export default function MediaPage() {
             ? Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="h-32 bg-gray-100 animate-pulse rounded" />
               ))
-            : media.map(item => (
-                <div
-                  key={item.id}
-                  className="cursor-pointer border rounded overflow-hidden"
-                  onClick={() => openModal(item)}
-                >
-                  <Image
-                    src={`${process.env.NEXT_PUBLIC_UPLOAD_BASE}/${item.path}`}
-                    width={item.width || 200}
-                    height={item.height || 200}
-                    alt={item.alt || item.originalname}
-                    className="object-cover w-full h-32"
-                  />
-                  <div className="p-3 text-sm text-center font-bold text-blue-900 truncate">{item.originalname.replace(/\.[^/.]+$/, "")}</div>
-                </div>
-              ))}
+            : !currentFolder
+              ? FOLDERS.map(folder => (
+                  <div
+                    key={folder}
+                    className="cursor-pointer flex flex-col items-center justify-center border rounded p-6 hover:bg-gray-100"
+                    onClick={() => setCurrentFolder(folder)}
+                  >
+                    <Folder size={48} className="text-gray-500" />
+                    <div className="mt-2 text-sm font-semibold">{folder}</div>
+                  </div>
+                ))
+              : media.map(item => (
+                  <div
+                    key={item.id}
+                    className="cursor-pointer border rounded overflow-hidden"
+                    onClick={() => openModal(item)}
+                  >
+                    <Image
+                      src={`${process.env.NEXT_PUBLIC_UPLOAD_BASE}/${item.path}`}
+                      width={item.width || 200}
+                      height={item.height || 200}
+                      alt={item.alt || item.originalname}
+                      className="object-cover w-full h-32"
+                    />
+                    <div className="p-3 text-sm text-center font-bold text-blue-900 truncate">
+                      {item.originalname.replace(/\.[^/.]+$/, "")}
+                    </div>
+                  </div>
+                ))}
         </div>
 
         {/* Pagination */}
-        <div className="flex justify-center items-center py-4 space-x-4">
-          <button
-            onClick={() => fetchMedia(page - 1)}
-            disabled={page === 1}
-            className="px-3 py-1 border rounded disabled:opacity-50"
-          >
-            Prev
-          </button>
-          <span className="text-sm">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            onClick={() => fetchMedia(page + 1)}
-            disabled={page === totalPages}
-            className="px-3 py-1 border rounded disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
+        {currentFolder && (
+          <div className="flex justify-center items-center py-4 space-x-4">
+            <button
+              onClick={() => fetchMedia(page - 1, currentFolder)}
+              disabled={page === 1}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <span className="text-sm">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => fetchMedia(page + 1, currentFolder)}
+              disabled={page === totalPages}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Modal */}
@@ -228,7 +269,6 @@ export default function MediaPage() {
                 alt={selected.alt}
                 className="w-full object-contain h-64"
               />
-              {/* File Information - Read Only */}
               <div className="grid grid-cols-2 gap-4 p-4">
                 <div>
                   <label className="block text-sm font-bold text-blue-700">Filename</label>
@@ -248,12 +288,11 @@ export default function MediaPage() {
                   <label className="block text-sm font-bold text-blue-700">Dimensions</label>
                   <div className="mt-1 text-sm">
                     {selected.width && selected.height 
-                      ? `${selected.width} × ${selected.height} px` 
+                      ? `${selected.width} × ${selected.height} px`
                       : 'N/A'}
                   </div>
                 </div>
               </div>
-              {/* Editable Fields */}
               <div className='px-4'>
                 <label className="block text-sm font-bold text-blue-700">Title</label>
                 <input

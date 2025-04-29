@@ -70,7 +70,7 @@ export default function TeamCreatePage() {
   const uploadImage = async (file: File, token: string): Promise<string> => {
     const fd = new FormData();
     fd.append('file', file);
-
+    fd.append('category', 'team');
     const res = await fetch(`${API_URL}/media`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -81,7 +81,7 @@ export default function TeamCreatePage() {
       throw new Error(err.message || 'Media upload failed');
     }
     const { data: media } = await res.json();
-    return `${API_URL}/${media.path}`;
+    return media.path;
   };
 
   // 5️⃣ submit: upload cover if needed, then create member

@@ -121,6 +121,7 @@ export default function ProjectEditPage() {
   const uploadImage = async (file: File, token: string): Promise<string> => {
     const fd = new FormData();
     fd.append('file', file);
+    fd.append('category', 'projects');
     const res = await fetch(`${API_URL}/media`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -131,7 +132,7 @@ export default function ProjectEditPage() {
       throw new Error(err.message || 'Media upload failed');
     }
     const { data: media } = await res.json();
-    return `${API_URL}/${media.path}`;
+    return media.path;
   };
 
   // submit

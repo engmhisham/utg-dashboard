@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   PencilLine,
   Upload,
+  Rss,
 } from 'lucide-react';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
@@ -169,7 +170,7 @@ export default function BlogEditPage() {
   const uploadImage = async (file: File, token: string): Promise<string> => {
     const fd = new FormData();
     fd.append('file', file);
-
+    fd.append('category', 'blogs');
     const response = await fetch(`${API_URL}/media`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -182,7 +183,7 @@ export default function BlogEditPage() {
     }
     
     const { data: media }: { data: MediaItem } = await response.json();
-    return `${UPLOAD_BASE}/${media.path}`;
+    return media.path;
   };
 
   // Process content to replace temp URLs with real URLs
@@ -300,7 +301,7 @@ export default function BlogEditPage() {
                 <ArrowLeft size={20} />
               </Link>
               <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-                <PencilLine size={20} className="mr-2" />
+                <Rss size={24} className="mr-2" />
                 Edit Blog
               </h1>
             </div>

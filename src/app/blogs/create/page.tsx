@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import Sidebar from '@/src/components/Sidebar';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Menu, Plus, X, Image as ImageIcon, Upload } from 'lucide-react';
+import { ArrowLeft, Menu, Plus, X, Image as ImageIcon, Upload, Rss } from 'lucide-react';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
@@ -92,7 +92,7 @@ export default function BlogCreatePage() {
   const uploadImage = async (file: File, token: string): Promise<string> => {
     const fd = new FormData();
     fd.append('file', file);
-
+    fd.append('category', 'blogs');
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/media`,
       {
@@ -108,7 +108,9 @@ export default function BlogCreatePage() {
     }
     
     const { data: media }: { data: MediaItem } = await response.json();
-    return `${process.env.NEXT_PUBLIC_API_URL}/${media.path}`;
+    
+    console.log('Uploaded media path:', media.path);
+    return media.path;
   };
 
   // Process content to replace temp URLs with real URLs
@@ -186,7 +188,7 @@ export default function BlogCreatePage() {
       }
 
       toast.success('Blog created!');
-      router.push('/blogs');
+      // router.push('/blogs');
     } catch (err: any) {
       toast.error(err.message || 'An error occurred');
     } finally {
@@ -231,6 +233,7 @@ export default function BlogCreatePage() {
               >
                 <ArrowLeft size={20} />
               </Link>
+              <Rss size={24} className="mr-2" />
               <h1 className="text-xl md:text-2xl font-semibold">
                 Create Blog
               </h1>
@@ -301,7 +304,10 @@ export default function BlogCreatePage() {
                 <div className="relative max-w-xs mx-auto">
                   {/* Preview */}
                   <img
-                    src={previewUrl ?? form.coverImageUrl}
+                    src={
+                      previewUrl
+                        ?? `${process.env.NEXT_PUBLIC_API_URL}/${form.coverImageUrl}`
+                    }
                     alt="Cover preview"
                     className="w-full rounded-lg"
                   />

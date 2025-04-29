@@ -15,7 +15,8 @@ import {
   Trash2,
   Menu,
   X,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Rss
 } from 'lucide-react';
 import Link from 'next/link';
 import { Blog, BlogStatus } from '@/src/lib/types';
@@ -155,7 +156,7 @@ export default function BlogsPage() {
                 <ArrowLeft size={20} />
               </Link>
               <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-                <UsersRound size={22} className="mr-2" />
+                <Rss size={22} className="mr-2" />
                 Blogs
               </h1>
             </div>

@@ -71,7 +71,7 @@ export default function BrandCreatePage() {
   const uploadImage = async (file: File, token: string): Promise<string> => {
     const fd = new FormData();
     fd.append('file', file);
-
+    fd.append('category', 'brands');
     const res = await fetch(`${API_URL}/media`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -83,7 +83,7 @@ export default function BrandCreatePage() {
     }
     const { data: media } = await res.json();
     // returns full URL to stored media
-    return `${API_URL}/${media.path}`;
+    return media.path;
   };
 
   // 3️⃣ submit: first upload logo (if any), then create brand
