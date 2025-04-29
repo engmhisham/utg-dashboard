@@ -34,11 +34,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: |
-            .next/
-            node_modules/
-            package.json
-            next.config.js
+          source: ".next/,node_modules/,package.json,next.config.js,public/"
           target: "/var/www/frontend"
 
       # 5) إعادة تحميل Nginx ليتعرّف على النسخة الجديدة
