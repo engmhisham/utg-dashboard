@@ -158,23 +158,60 @@ export default function TestimonialEditPage({ params }: { params: { id: string }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-
+  
     try {
       const token = Cookies.get('accessToken');
       if (!token) throw new Error('Not authenticated');
-
+  
       let logoUrl  = formData.logoUrl;
       let coverUrl = formData.coverImageUrl;
-
-      if (pendingLogo)  logoUrl  = await uploadImage(pendingLogo, token);
-      if (pendingCover) coverUrl = await uploadImage(pendingCover, token);
-
+  
+      // ⬅️ Remove old logo image
+      if (pendingLogo && formData.logoUrl) {
+        try {
+          const cleanLogoPath = new URL(formData.logoUrl).pathname.replace(/^\/+/, '');
+          console.log('🧩 Deleting logoUrl:', formData.logoUrl);
+          console.log('📎 Clean path:', cleanLogoPath);
+          await fetch(`${API_URL}/media/remove-by-url`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ url: cleanLogoPath }),
+          });
+        } catch (err) {
+          console.warn('⚠️ Invalid logoUrl, skipping delete');
+        }
+        logoUrl = await uploadImage(pendingLogo, token);
+      }
+  
+      // ⬅️ Remove old cover image
+      if (pendingCover && formData.coverImageUrl) {
+        try {
+          const cleanCoverPath = new URL(formData.coverImageUrl).pathname.replace(/^\/+/, '');
+          console.log('🧩 Deleting coverImageUrl:', formData.coverImageUrl);
+          console.log('📎 Clean path:', cleanCoverPath);
+          await fetch(`${API_URL}/media/remove-by-url`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ url: cleanCoverPath }),
+          });
+        } catch (err) {
+          console.warn('⚠️ Invalid logoUrl, skipping delete');
+        }
+        coverUrl = await uploadImage(pendingCover, token);
+      }
+  
       const payload = {
         ...formData,
         logoUrl,
         coverImageUrl: coverUrl,
       };
-
+  
       const res = await fetch(`${API_URL}/testimonials/${testimonialId}`, {
         method: 'PATCH',
         headers: {
@@ -183,6 +220,7 @@ export default function TestimonialEditPage({ params }: { params: { id: string }
         },
         body: JSON.stringify(payload),
       });
+  
       if (!res.ok) throw new Error();
       toast.success('Testimonial updated');
       router.push('/testimonials');
@@ -192,6 +230,7 @@ export default function TestimonialEditPage({ params }: { params: { id: string }
       setSaving(false);
     }
   };
+  
 
   const handleCancel = () => router.push('/testimonials');
   if (initialLoading) return <div className="p-8 text-gray-500">Loading…</div>;

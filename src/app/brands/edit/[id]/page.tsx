@@ -71,7 +71,7 @@ export default function BrandEditPage() {
 
         setForm({
           status:         data.status,
-          logoUrl:        data.logoUrl,
+          logoUrl:        getImgSrc(data.logoUrl),
           title_en:       data.name,
           description_en: data.description,
           title_ar:       data.name,
@@ -125,7 +125,23 @@ export default function BrandEditPage() {
       // upload pendingFile if present
       let logoUrl = form.logoUrl;
       if (pendingFile) {
-        logoUrl = await uploadImage(pendingFile, token);
+        const newPath = await uploadImage(pendingFile, token);
+
+        // Remove old image if it exists
+        if (form.logoUrl) {
+          console.log('🧩 Deleting logo:', form.logoUrl);
+          const strippedPath = new URL(form.logoUrl).pathname.replace(/^\/+/, '');
+          await fetch(`${API}/media/remove-by-url`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ url: strippedPath }),
+          });
+        }
+
+        logoUrl = newPath;
       }
 
       const payload = {

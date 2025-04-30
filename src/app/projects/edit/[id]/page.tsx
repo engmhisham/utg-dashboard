@@ -139,17 +139,39 @@ export default function ProjectEditPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+  
     try {
       const token = Cookies.get('accessToken');
       if (!token) throw new Error('Not authenticated');
-
-      // upload pending
+  
+      // 🧩 Remove deleted existing images (if removed in UI)
+      const removedImages = existingImages.filter((url) => !filteredExisting.includes(url));
+      for (const url of removedImages) {
+        const cleanPath = url.startsWith('http')
+          ? new URL(url).pathname.replace(/^\/+/, '')
+          : url.replace(/^\/+/, '');
+        try {
+          await fetch(`${API_URL}/media/remove-by-url`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ url: cleanPath }),
+          });
+        } catch (err) {
+          console.warn('⚠️ Failed to remove old image:', cleanPath);
+        }
+      }
+  
+      // 🆕 Upload new images
       const newUrls: string[] = [];
       for (const file of pendingFiles) {
-        newUrls.push(await uploadImage(file, token));
+        const url = await uploadImage(file, token);
+        newUrls.push(url);
       }
-
-      // payload
+  
+      // ✅ Prepare final payload
       const payload: Record<string, any> = {
         title_en:       form.title_en,
         description_en: form.description_en,
@@ -158,12 +180,13 @@ export default function ProjectEditPage() {
         description_ar: form.description_ar,
         url_ar:         form.url_en,
       };
-      // combine and always send 4 slots
+  
       const all = [...filteredExisting, ...newUrls].slice(0, 4);
       for (let j = 0; j < 4; j++) {
         payload[`image${j + 1}Url`] = all[j] || '';
       }
-
+  
+      // 📨 PATCH request
       const res = await fetch(`${API_URL}/projects/${projectId}`, {
         method:  'PATCH',
         headers: {
@@ -172,6 +195,7 @@ export default function ProjectEditPage() {
         },
         body: JSON.stringify(payload),
       });
+  
       if (!res.ok) throw new Error();
       toast.success('Project updated');
       router.push('/projects');
@@ -181,6 +205,7 @@ export default function ProjectEditPage() {
       setSaving(false);
     }
   };
+  
 
   if (initialLoading) {
     return (

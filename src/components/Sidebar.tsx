@@ -172,10 +172,10 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               type="text"
-              placeholder="Search..."
+              placeholder="Search"
               className="w-full bg-gray-100 border-2 border-gray-300 rounded-xl px-8 py-2 text-sm"
             />
-            <Search size={14} className="absolute left-2.5 top-2.5 text-gray-500" />
+            <Search size={14} className="absolute left-3 top-3 text-gray-500" />
           </div>
         </div>
 

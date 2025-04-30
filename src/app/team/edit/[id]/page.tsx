@@ -120,7 +120,26 @@ export default function TeamEditPage() {
       if (!token) throw new Error('Not authenticated');
 
       let coverUrl = form.cover;
-      if (pendingFile) {
+      // 🧩 Remove old logo if there's a new one
+      if (pendingFile && form.cover) {
+        try {
+          const cleanPath = form.cover.startsWith('http')
+            ? new URL(form.cover).pathname.replace(/^\/+/, '')
+            : form.cover.replace(/^\/+/, '');
+          console.log('🧩 Deleting old logo:', cleanPath);
+          await fetch(`${API_URL}/media/remove-by-url`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ url: cleanPath }),
+          });
+        } catch (err) {
+          console.warn('⚠️ Failed to remove old logo:', err);
+        }
+
+        // Upload new image
         coverUrl = await uploadImage(pendingFile, token);
       }
 

@@ -211,7 +211,10 @@ export default function BlogEditPage() {
       return content;
     }
   };
-
+  const stripHost = (full: string): string => {
+    const url = new URL(full);
+    return url.pathname.replace(/^\/+/, ''); // remove any leading slashes
+  };
   // Save edits
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,7 +227,24 @@ export default function BlogEditPage() {
       // 1️⃣ Upload new cover image if pending
       let coverUrl = form.coverImageUrl;
       if (pendingFile) {
-        coverUrl = await uploadImage(pendingFile, token);
+        const newPath = await uploadImage(pendingFile, token);
+
+        // Remove old image if it exists
+        if (form.coverImageUrl) {
+          console.log('🧩 Deleting coverImageUrl:', form.coverImageUrl);
+          const strippedPath = new URL(form.coverImageUrl).pathname.replace(/^\/+/, '');
+          console.log('📎 Clean path:', strippedPath);
+          await fetch(`${API_URL}/media/remove-by-url`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ url: strippedPath  }),
+          });
+        }
+
+        coverUrl = newPath;
       }
 
       // 2️⃣ Upload new content images

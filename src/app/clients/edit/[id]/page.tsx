@@ -126,7 +126,26 @@ export default function ClientEditPage() {
 
       // upload if new
       let logoUrl = form.logoUrl;
-      if (pendingFile) {
+      // 🧩 Remove old logo if there's a new one
+      if (pendingFile && form.logoUrl) {
+        try {
+          const cleanPath = form.logoUrl.startsWith('http')
+            ? new URL(form.logoUrl).pathname.replace(/^\/+/, '')
+            : form.logoUrl.replace(/^\/+/, '');
+          console.log('🧩 Deleting old logo:', cleanPath);
+          await fetch(`${API_URL}/media/remove-by-url`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ url: cleanPath }),
+          });
+        } catch (err) {
+          console.warn('⚠️ Failed to remove old logo:', err);
+        }
+
+        // Upload new image
         logoUrl = await uploadImage(pendingFile, token);
       }
 

@@ -173,13 +173,13 @@ export default function MediaPage() {
             {currentFolder ? (
               <>
                 <ImageIcon size={22} className="text-gray-600" />
-                Media Library <ChevronRight size={16} className="text-gray-600" />
+                Media <ChevronRight size={16} className="text-gray-600" />
                 {currentFolder}
               </>
             ) : (
               <>
                 <ImageIcon size={22} className="text-gray-600" />
-                Media Library
+                Media
               </>
             )}
           </h1>
