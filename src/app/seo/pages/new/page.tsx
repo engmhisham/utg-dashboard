@@ -267,14 +267,13 @@ export default function AddPageSeoPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-between space-x-4">
+            <div className="flex items-center justify-end space-x-4">
               <button
                 type="button"
                 onClick={() => router.back()}
                 className="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50"
               >
                 <div className="flex items-center">
-                  <RefreshCw size={16} className="mr-2" />
                   Cancel
                 </div>
               </button>
