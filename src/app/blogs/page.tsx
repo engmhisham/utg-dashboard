@@ -143,29 +143,50 @@ export default function BlogsPage() {
         {/* Page Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
           <div className="p-4 md:p-6 flex items-center justify-between">
-            <div className="flex items-center">
-              {isMobile && (
+            {isMobile ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSidebarOpen(o => !o)}
+                    className="p-1 bg-white rounded-full shadow border"
+                  >
+                    {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                  </button>
+                  <Link href="/" className="text-gray-500 hover:text-gray-700">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl md:text-2xl font-semibold flex items-center">
+                    <Rss size={22} className="mr-2" /> Blogs
+                  </h1>
+                </div>
                 <button
-                  onClick={() => setSidebarOpen(o => !o)}
-                  className="mr-2 rounded-full p-1 border shadow"
+                  onClick={() => router.push('/brands/create')}
+                  className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
                 >
-                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                  <Plus size={18} />
                 </button>
-              )}
-              <Link href="/" className="mr-2 text-gray-500 hover:text-gray-700">
-                <ArrowLeft size={20} />
-              </Link>
-              <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-                <Rss size={22} className="mr-2" />
-                Blogs
-              </h1>
-            </div>
-            <button
-              onClick={() => router.push('/blogs/create')}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-            >
-              <Plus size={18} className="mr-2" /> Add Blog
-            </button>
+              </>
+            ) : (
+              <>
+                {/* Back button */}
+                <div className="flex items-center gap-2">
+                  <Link href="/" className="text-gray-500 hover:text-gray-700">
+                    <ArrowLeft size={20} />
+                  </Link>
+                  <h1 className="text-xl md:text-2xl font-semibold flex items-center">
+                    <Rss size={22} className="mr-2" /> Blogs
+                  </h1>
+                </div>
+                <button
+                  onClick={() => router.push('/brands/create')}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                >
+                  <Plus size={18} className="mr-2" /> Add Blog
+                </button>
+              </>
+            )}
+
+
           </div>
         </div>
 

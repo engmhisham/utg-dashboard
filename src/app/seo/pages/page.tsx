@@ -128,7 +128,7 @@ export default function SEOPagesPage() {
 
         {/* Tabs + Add button */}
         <div className="mx-auto max-w-7xl px-4 pb-6">
-          <div className="md:flex flex-col md:flex-row justify-between mb-4 border-b border-gray-200 pb-2">
+          <div className="md:flex flex-col md:flex-row justify-between mb-4 border-b border-gray-200">
             {/* Tabs */}
             <div className="flex space-x-6">
               <Link
@@ -175,25 +175,32 @@ export default function SEOPagesPage() {
 
           {/* Search input */}
           <div className="mb-4">
-            <div className="relative flex justify-between">
-              <input
-                type="text"
-                placeholder="Search pages…"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="md:w-70 pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
-              {/* Add Page button */}
-            <Link
-              href="/seo/pages/new"
-              className="mt-3 md:mt-0 flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <Plus size={18} className="mr-2" /> Add Page
-            </Link>
+            <div className="flex flex-col gap-3  md:flex-row md:items-center md:justify-between">
+              {/* input */}
+              <div className="relative w-full md:w-72">
+                <input
+                  type="text"
+                  placeholder="Search pages…"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Search
+                  size={18}
+                  className="absolute left-3 top-2.5 text-gray-400"
+                />
+              </div>
+
+              {/* button */}
+              <Link
+                href="/seo/pages/new"
+                className="w-full md:w-auto flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <Plus size={18} className="mr-2" /> Add Page
+              </Link>
             </div>
-            
           </div>
+
 
           {/* Desktop Table */}
           <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden shadow">
