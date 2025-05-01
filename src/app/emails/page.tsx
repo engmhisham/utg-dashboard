@@ -208,7 +208,7 @@ export default function EmailsPage() {
       <main className="flex-1 flex flex-col overflow-y-auto">
         {/* Sticky Header (Full width, no container padding) */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
-          <div className="p-4 md:p-6">
+          <div className="p-4 md:p-7">
             {isMobile ? (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
