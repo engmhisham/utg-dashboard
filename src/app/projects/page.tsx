@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { Project } from '@/src/lib/types';
 import ConfirmModal from '@/src/components/ConfirmModal';
 import { getImgSrc } from '@/src/utils/getImgSrc';
+import PermissionModal from '@/src/components/PermissionModal';
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -34,8 +35,11 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [unauthorizedModalOpen, setUnauthorizedModalOpen] = useState(false);
 
   const openDeleteModal = (id: string) => {
+    if (userRole !== 'admin') return showUnauthorizedPopup();
     setProjectToDelete(id);
     setDeleteModalOpen(true);
   };
@@ -48,13 +52,37 @@ export default function ProjectsPage() {
     await deleteProject(projectToDelete);
     closeDeleteModal();
   };
-
+  const handleEdit = (id: string) => {
+    if (userRole !== 'admin') return showUnauthorizedPopup();
+    router.push(`/projects/edit/${id}`);
+  };
   // Responsive check
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
+  }, []);
+
+  const showUnauthorizedPopup = () => setUnauthorizedModalOpen(true);
+  const closeUnauthorizedPopup = () => setUnauthorizedModalOpen(false);
+  
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const token = Cookies.get('accessToken');
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setUserRole(data.data.role); // assuming the response includes { role: 'admin' | ... }
+      } catch {
+        setUserRole(null); // fallback
+      }
+    };
+
+    fetchUserRole();
   }, []);
 
   // Fetch projects and build images array
@@ -150,8 +178,14 @@ export default function ProjectsPage() {
                   Projects
                 </h1>
                 <button
-                  onClick={() => router.push('/projects/create')}
-                  className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                  onClick={() => {
+                    if (userRole !== 'admin') return showUnauthorizedPopup();
+                    router.push('/projects/create');
+                  }}
+                  disabled={loading || userRole !== 'admin'}
+                  className={`${loading || userRole !== 'admin'
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-blue-600 text-white rounded-xl hover:bg-blue-700'} p-2 rounded-xl`}
                 >
                   <Plus size={18} />
                 </button>
@@ -167,8 +201,14 @@ export default function ProjectsPage() {
                     Projects</h1>
                 </div>
                 <button
-                  onClick={() => router.push('/projects/create')}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                  onClick={() => {
+                    if (userRole !== 'admin') return showUnauthorizedPopup();
+                    router.push('/projects/create');
+                  }}
+                  disabled={loading || userRole !== 'admin'}
+                  className={`${loading || userRole !== 'admin'
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'} flex items-center px-4 py-2 rounded-xl`}
                 >
                   <Plus size={18} className="mr-2" /> Add Project
                 </button>
@@ -225,7 +265,10 @@ export default function ProjectsPage() {
                     <tr
                       key={pr.id}
                       className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => router.push(`/projects/edit/${pr.id}`)}
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleEdit(pr.id);
+                      }}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center">
@@ -259,7 +302,10 @@ export default function ProjectsPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button
-                          onClick={() => router.push(`/projects/edit/${pr.id}`)}
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleEdit(pr.id);
+                          }}
                           className="text-indigo-600 hover:text-indigo-900 mr-2"
                         >
                           <PencilLine size={16} />
@@ -298,7 +344,10 @@ export default function ProjectsPage() {
                 <div
                   key={pr.id}
                   className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 cursor-pointer"
-                  onClick={() => router.push(`/projects/edit/${pr.id}`)}
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleEdit(pr.id);
+                  }}
                 >
                   <div className="flex items-center justify-between mb-2 w-full">
                     {/* left group */}
@@ -319,7 +368,7 @@ export default function ProjectsPage() {
                       <button
                         onClick={e => {
                           e.stopPropagation();
-                          router.push(`/projects/edit/${pr.id}`);
+                          handleEdit(pr.id);
                         }}
                         className="text-indigo-600 hover:text-indigo-900"
                       >
@@ -359,6 +408,11 @@ export default function ProjectsPage() {
           </div>
         </div>
       </main>
+      <PermissionModal
+        show={unauthorizedModalOpen}
+        message="You don’t have permission to perform this action."
+        onClose={closeUnauthorizedPopup}
+      />
       <ConfirmModal
         show={deleteModalOpen}
         message="Delete this project?"

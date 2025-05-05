@@ -21,6 +21,7 @@ import LoadingSpinner from '@/src/components/LoadingSpinner';
 import ConfirmModal from '@/src/components/ConfirmModal';
 import { get } from 'http';
 import { getImgSrc } from '@/src/utils/getImgSrc';
+import PermissionModal from '@/src/components/PermissionModal';
 
 export default function TeamPage() {
   const router = useRouter();
@@ -35,7 +36,11 @@ export default function TeamPage() {
   const [loading, setLoading]               = useState(true);
   const [deleteModalOpen, setDeleteModalOpen]   = useState(false);
   const [memberToDelete, setMemberToDelete]     = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [unauthorizedModalOpen, setUnauthorizedModalOpen] = useState(false);
+
   const openDeleteModal = (id: string) => {
+    if (userRole !== 'admin') return showUnauthorizedPopup();
     setMemberToDelete(id);
     setDeleteModalOpen(true);
   };
@@ -68,6 +73,27 @@ export default function TeamPage() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const showUnauthorizedPopup = () => setUnauthorizedModalOpen(true);
+  const closeUnauthorizedPopup = () => setUnauthorizedModalOpen(false);
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const token = Cookies.get('accessToken');
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setUserRole(data.data.role); // assuming the response includes { role: 'admin' | ... }
+      } catch {
+        setUserRole(null); // fallback
+      }
+    };
+
+    fetchUserRole();
   }, []);
 
   useEffect(() => {
@@ -117,7 +143,10 @@ export default function TeamPage() {
     }
   };
 
-  const handleEdit = (id: string) => router.push(`/team/edit/${id}`);
+  const handleEdit = (id: string) => {
+    if (userRole !== 'admin') return showUnauthorizedPopup();
+    router.push(`/team/edit/${id}`);
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure?')) return;
@@ -180,8 +209,14 @@ export default function TeamPage() {
 
                 {/* Right group: “+” button */}
                 <button
-                  onClick={() => router.push('/team/create')}
-                  className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                  onClick={() => {
+                    if (userRole !== 'admin') return showUnauthorizedPopup();
+                    router.push('/team/create');
+                  }}
+                  disabled={loading || userRole !== 'admin'}
+                  className={`${loading || userRole !== 'admin'
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-blue-600 text-white rounded-xl hover:bg-blue-700'} p-2 rounded-xl`}
                 >
                   <Plus size={18} />
                 </button>
@@ -201,8 +236,14 @@ export default function TeamPage() {
 
                 {/* Right group: “Add Member” button */}
                 <button
-                  onClick={() => router.push('/team/create')}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                  onClick={() => {
+                    if (userRole !== 'admin') return showUnauthorizedPopup();
+                    router.push('/team/create');
+                  }}
+                  disabled={loading || userRole !== 'admin'}
+                  className={`${loading || userRole !== 'admin'
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'} flex items-center px-4 py-2 rounded-xl`}
                 >
                   <Plus size={18} className="mr-2" /> Add Member
                 </button>
@@ -402,6 +443,11 @@ export default function TeamPage() {
           </div>
         </div>
       </main>
+      <PermissionModal
+        show={unauthorizedModalOpen}
+        message="You don’t have permission to perform this action."
+        onClose={closeUnauthorizedPopup}
+      />
       <ConfirmModal
         show={deleteModalOpen}
         message="Delete this member?"

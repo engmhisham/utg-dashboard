@@ -20,6 +20,7 @@ import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
 import ConfirmModal from '@/src/components/ConfirmModal';
 import { getImgSrc } from '@/src/utils/getImgSrc';
+import PermissionModal from '@/src/components/PermissionModal';
 
 export default function TestimonialsPage() {
   const router = useRouter();
@@ -34,11 +35,14 @@ export default function TestimonialsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [testimonialToDelete, setTestimonialToDelete] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [unauthorizedModalOpen, setUnauthorizedModalOpen] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
   // Helper to open modal
   function openDeleteModal(id: string) {
+    if (userRole !== 'admin') return showUnauthorizedPopup();
     setTestimonialToDelete(id);
     setDeleteModalOpen(true);
   }
@@ -73,6 +77,27 @@ export default function TestimonialsPage() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const showUnauthorizedPopup = () => setUnauthorizedModalOpen(true);
+    const closeUnauthorizedPopup = () => setUnauthorizedModalOpen(false);
+  
+    useEffect(() => {
+      const fetchUserRole = async () => {
+        try {
+          const token = Cookies.get('accessToken');
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+          setUserRole(data.data.role); // assuming the response includes { role: 'admin' | ... }
+        } catch {
+          setUserRole(null); // fallback
+        }
+      };
+  
+      fetchUserRole();
   }, []);
 
   // fetch testimonials
@@ -125,7 +150,10 @@ export default function TestimonialsPage() {
     );
 
   // actions
-  const handleEdit = (id: string) => router.push(`/testimonials/edit/${id}`);
+  const handleEdit = (id: string) => {
+    if (userRole !== 'admin') return showUnauthorizedPopup();
+    router.push(`/testimonials/edit/${id}`);
+  };
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this testimonial?')) return;
     const token = Cookies.get('accessToken');
@@ -172,8 +200,14 @@ export default function TestimonialsPage() {
 
                 {/* Right group: “+” button */}
                 <button
-                  onClick={() => router.push('/testimonials/create')}
-                  className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                  onClick={() => {
+                    if (userRole !== 'admin') return showUnauthorizedPopup();
+                    router.push('/testimonials/create');
+                  }}
+                  disabled={loading || userRole !== 'admin'}
+                  className={`${loading || userRole !== 'admin'
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-blue-600 text-white rounded-xl hover:bg-blue-700'} p-2 rounded-xl`}
                 >
                   <Plus size={18} />
                 </button>
@@ -193,8 +227,14 @@ export default function TestimonialsPage() {
 
                 {/* Right group: “Add Member” button */}
                 <button
-                  onClick={() => router.push('/testimonials/create')}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                  onClick={() => {
+                    if (userRole !== 'admin') return showUnauthorizedPopup();
+                    router.push('/testimonials/create');
+                  }}
+                  disabled={loading || userRole !== 'admin'}
+                  className={`${loading || userRole !== 'admin'
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'} flex items-center px-4 py-2 rounded-xl`}
                 >
                   <Plus size={18} className="mr-2" /> Add Testimonial
                 </button>
@@ -427,6 +467,11 @@ export default function TestimonialsPage() {
 
         </div>
       </main>
+      <PermissionModal
+        show={unauthorizedModalOpen}
+        message="You don’t have permission to perform this action."
+        onClose={closeUnauthorizedPopup}
+      />
       <ConfirmModal
         show={deleteModalOpen}
         message="Delete this testimonial?"

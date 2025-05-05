@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { Client } from '@/src/lib/types';
 import ConfirmModal from '@/src/components/ConfirmModal';
 import { getImgSrc } from '@/src/utils/getImgSrc';
+import PermissionModal from '@/src/components/PermissionModal';
 
 export default function ClientsPage() {
   const router = useRouter();
@@ -34,9 +35,12 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen]   = useState(false);
   const [clientToDelete, setClientToDelete]     = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [unauthorizedModalOpen, setUnauthorizedModalOpen] = useState(false);
 
   // open / close / confirm logic
   const openDeleteModal = (id: string) => {
+    if (userRole !== 'admin') return showUnauthorizedPopup();
     setClientToDelete(id);
     setDeleteModalOpen(true);
   };
@@ -69,6 +73,28 @@ export default function ClientsPage() {
     window.addEventListener('resize', checkIfMobile);
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
+
+
+  const showUnauthorizedPopup = () => setUnauthorizedModalOpen(true);
+  const closeUnauthorizedPopup = () => setUnauthorizedModalOpen(false);
+
+  useEffect(() => {
+      const fetchUserRole = async () => {
+        try {
+          const token = Cookies.get('accessToken');
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+          setUserRole(data.data.role); // assuming the response includes { role: 'admin' | ... }
+        } catch {
+          setUserRole(null); // fallback
+        }
+      };
+    
+      fetchUserRole();
+    }, []);
 
   // fetch clients
   useEffect(() => {
@@ -118,7 +144,10 @@ export default function ClientsPage() {
     );
 
   // actions
-  const handleEdit = (id: string) => router.push(`/clients/edit/${id}`);
+  const handleEdit = (id: string) => {
+    if (userRole !== 'admin') return showUnauthorizedPopup();
+    router.push(`/clients/edit/${id}`);
+  };
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this client?')) return;
     try {
@@ -164,8 +193,14 @@ export default function ClientsPage() {
             
               {/* Right “+” button */}
               <button
-                onClick={() => router.push('/clients/create')}
-                className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                onClick={() => {
+                  if (userRole !== 'admin') return showUnauthorizedPopup();
+                  router.push('/clients/create');
+                }}
+                disabled={loading || userRole !== 'admin'}
+                className={`${loading || userRole !== 'admin'
+                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  : 'bg-blue-600 text-white rounded-xl hover:bg-blue-700'} p-2 rounded-xl`}
               >
                 <Plus size={18} />
               </button>
@@ -183,8 +218,14 @@ export default function ClientsPage() {
                   </h1>
                 </div>
                 <button
-                  onClick={() => router.push('/clients/create')}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                  onClick={() => {
+                    if (userRole !== 'admin') return showUnauthorizedPopup();
+                    router.push('/clients/create');
+                  }}
+                  disabled={loading || userRole !== 'admin'}
+                  className={`${loading || userRole !== 'admin'
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'} flex items-center px-4 py-2 rounded-xl`}
                 >
                   <Plus size={18} className="mr-2" />
                   Add Client
@@ -260,7 +301,10 @@ export default function ClientsPage() {
                     <tr
                       key={client.id}
                       className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => handleEdit(client.id)}
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleEdit(client.id);
+                      }}
                     >
                       <td className="px-6 py-4 flex items-center">
                         <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
@@ -316,7 +360,10 @@ export default function ClientsPage() {
                         onClick={e => e.stopPropagation()}
                       >
                         <button
-                          onClick={() => handleEdit(client.id)}
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleEdit(client.id);
+                          }}
                           className="text-indigo-600 hover:text-indigo-900"
                         >
                           <PencilLine size={16} />
@@ -355,13 +402,19 @@ export default function ClientsPage() {
                 <div
                   key={client.id}
                   className="bg-white rounded-xl border shadow-sm cursor-pointer"
-                  onClick={() => handleEdit(client.id)}
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleEdit(client.id);
+                  }}
                 >
                   {/* ...your existing mobile card markup... */}
                   <div
                     key={client.id}
                     className="bg-white rounded-xl border shadow-sm p-4 cursor-pointer"
-                    onClick={() => handleEdit(client.id)}
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleEdit(client.id);
+                    }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
@@ -449,6 +502,11 @@ export default function ClientsPage() {
           </div>
         </div>
       </main>
+      <PermissionModal
+        show={unauthorizedModalOpen}
+        message="You don’t have permission to perform this action."
+        onClose={closeUnauthorizedPopup}
+      />
       <ConfirmModal
         show={deleteModalOpen}
         message="Delete this client?"
