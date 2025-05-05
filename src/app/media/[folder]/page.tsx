@@ -147,10 +147,10 @@ export default function FolderImagesPage() {
   }, [folder]);
 
   useEffect(() => {
-    if (imageLoaded === media.length && media.length) {
+    if (!loading && (media.length === 0 || imageLoaded === media.length)) {
       setShowOverlay(false);
     }
-  }, [imageLoaded, media.length]);
+  }, [imageLoaded, media.length, loading]);
 
   // reset "Copied" label whenever new modal opens/closes
   useEffect(() => setCopied(false), [selected]);
@@ -246,12 +246,6 @@ export default function FolderImagesPage() {
               if (fileInputRef.current) fileInputRef.current.value = '';
             }}
           />
-          {/* <button
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 text-sm font-medium shadow-sm transition"
-          >
-            <Plus size={18} /> Upload
-          </button> */}
         </header>
 
         {/* Images grid */}
@@ -280,6 +274,9 @@ export default function FolderImagesPage() {
                   blurDataURL="/placeholder.png"
                   onLoadingComplete={() =>
                     setImageLoaded(count => count + 1)
+                  }
+                  onError={() => 
+                    setImageLoaded(c => c + 1)
                   }
                 />
                 <span className="absolute bottom-0 left-0 w-full bg-black/50 text-white text-xs font-medium px-2 py-1 truncate">

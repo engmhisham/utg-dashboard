@@ -160,7 +160,7 @@ export default function BlogsPage() {
                   </h1>
                 </div>
                 <button
-                  onClick={() => router.push('/brands/create')}
+                  onClick={() => router.push('/blogs/create')}
                   className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
                 >
                   <Plus size={18} />
@@ -178,7 +178,7 @@ export default function BlogsPage() {
                   </h1>
                 </div>
                 <button
-                  onClick={() => router.push('/brands/create')}
+                  onClick={() => router.push('/blogs/create')}
                   className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
                 >
                   <Plus size={18} className="mr-2" /> Add Blog

@@ -27,31 +27,48 @@ export default function UserInfoPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
+  // detect mobile
   useEffect(() => {
-    const fx = () => setIsMobile(window.innerWidth < 768);
-    fx();
-    window.addEventListener('resize', fx);
-    return () => window.removeEventListener('resize', fx);
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // fetch user data
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
         const token = Cookies.get('accessToken');
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error('Failed to load user');
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/profile`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error('Failed to load profile');
+        }
         const json = await res.json();
-        setUser(json.data);
+        const user = json.data ?? json;
+        setUser(user);
       } catch (e: any) {
-        toast.error(e.message || 'Error');
+        toast.error(e.message || 'An error occurred');
       } finally {
         setLoading(false);
       }
     })();
   }, [id]);
+
+  // format date as Day Month Year
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -62,25 +79,25 @@ export default function UserInfoPage() {
 
       <main className="flex-1 overflow-y-auto">
         {/* header */}
-        <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
-          <div className="p-4 md:p-6 flex items-center justify-between">
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          <div className="flex items-center justify-between p-4 md:p-6">
             <div className="flex items-center">
               {isMobile && (
                 <button
                   onClick={() => setSidebarOpen(o => !o)}
-                  className="mr-2 p-1 rounded-full border shadow"
+                  className="mr-2 p-1 rounded-full border shadow-sm hover:bg-gray-100 transition"
                 >
                   {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
               )}
               <Link
                 href="/dashboard"
-                className="text-gray-500 hover:text-gray-700 mr-2"
+                className="text-gray-500 hover:text-gray-700 mr-3"
               >
                 <ArrowLeft size={20} />
               </Link>
-              <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-                <ShieldUser size={20} className="mr-2" />
+              <h1 className="flex items-center text-xl md:text-2xl font-semibold text-gray-800">
+                <ShieldUser size={20} className="mr-2 text-gray-600" />
                 User Info
               </h1>
             </div>
@@ -88,45 +105,71 @@ export default function UserInfoPage() {
         </div>
 
         {/* content */}
-        <div className="mx-auto max-w-3xl px-4 pb-24">
+        <div className="mx-auto max-w-3xl px-4 py-6">
           {loading ? (
             <div className="flex h-64 items-center justify-center">
               <LoadingSpinner className="h-8 w-8 text-gray-400" />
             </div>
           ) : !user ? (
-            <div className="flex h-64 items-center justify-center text-gray-500">
-              User not found
+            <div className="flex h-64 flex-col items-center justify-center text-gray-500">
+              <p>User not found</p>
+              <button
+                onClick={() => router.back()}
+                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+              >
+                Go Back
+              </button>
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm border p-6 space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-orange-200 rounded-full flex items-center justify-center text-xl font-medium">
-                  {user.username[0].toUpperCase()}
+            <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+              {/* card header */}
+              <div className="flex items-center px-6 py-4 border-b border-gray-100">
+                <div className="w-14 h-14 flex items-center justify-center bg-orange-200 rounded-full text-2xl font-bold text-orange-800">
+                  {user.username.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <p className="text-lg font-semibold">{user.username}</p>
-                  <p className="text-sm text-gray-500">{user.role}</p>
+                <div className="ml-4">
+                  <h2 className="text-2xl font-semibold text-gray-800">
+                    {user.username}
+                  </h2>
+                  <span
+                    className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded-full ${
+                      user.role === 'admin'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}
+                  >
+                    {user.role}
+                  </span>
                 </div>
               </div>
 
-              <dl className="divide-y">
-                <div className="py-3 flex justify-between">
-                  <dt className="font-medium text-gray-600">Email</dt>
-                  <dd className="text-gray-900">{user.email}</dd>
-                </div>
-                <div className="py-3 flex justify-between">
-                  <dt className="font-medium text-gray-600">Created</dt>
-                  <dd className="text-gray-900">
-                    {new Date(user.createdAt).toLocaleString()}
-                  </dd>
-                </div>
-                <div className="py-3 flex justify-between">
-                  <dt className="font-medium text-gray-600">Updated</dt>
-                  <dd className="text-gray-900">
-                    {new Date(user.updatedAt).toLocaleString()}
-                  </dd>
-                </div>
-              </dl>
+              {/* user details */}
+              <div className="px-6 py-4">
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Email</dt>
+                    <dd className="mt-1 text-sm text-gray-900 break-all">
+                      {user.email}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">
+                      Created At
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {formatDate(user.createdAt)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">
+                      Updated At
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {formatDate(user.updatedAt)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             </div>
           )}
         </div>

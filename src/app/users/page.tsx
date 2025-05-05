@@ -26,8 +26,10 @@ export default function UsersPage() {
   const [isMobile,    setIsMobile]    = useState(false);
   const [loading,     setLoading]     = useState(true);
   const [users,       setUsers]       = useState<User[]>([]);
+  const [forbidden,   setForbidden]   = useState(false);
+
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [userToDelete,    setUserToDelete]    = useState<string | null>(null);
 
   useEffect(() => {
     const fx = () => setIsMobile(window.innerWidth < 768);
@@ -38,12 +40,22 @@ export default function UsersPage() {
 
   useEffect(() => {
     (async () => {
+      setLoading(true);
       try {
         const token = Cookies.get('accessToken');
         const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (!r.ok) throw new Error('Failed to fetch users');
+
+        if (r.status === 403) {
+          // ليس لديك صلاحية لعرض المستخدمين
+          setForbidden(true);
+          return;
+        }
+        if (!r.ok) {
+          throw new Error('Failed to fetch users');
+        }
+
         const d = await r.json();
         setUsers(d.data);
       } catch (e: any) {
@@ -54,52 +66,68 @@ export default function UsersPage() {
     })();
   }, []);
 
-  const handleEdit = (id: string) => {
-    router.push(`/users/edit/${id}`);
+  // فتح/إغلاق مودال الحذف
+  const openDeleteModal = (id: string) => {
+    setUserToDelete(id);
+    setDeleteModalOpen(true);
   };
-// fire off the modal
-const openDeleteModal = (id: string) => {
-  setUserToDelete(id);
-  setDeleteModalOpen(true);
-};
-const closeDeleteModal = () => {
-  setUserToDelete(null);
-  setDeleteModalOpen(false);
-};
+  const closeDeleteModal = () => {
+    setUserToDelete(null);
+    setDeleteModalOpen(false);
+  };
 
-// when user clicks “Delete” in modal
-const confirmDelete = async () => {
-  if (!userToDelete) return;
-  try {
-    const token = Cookies.get('accessToken');
-    const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userToDelete}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!r.ok) throw new Error('Delete failed');
-    setUsers(prev => prev.filter(u => u.id !== userToDelete));
-    toast.success('User deleted');
-  } catch (e: any) {
-    toast.error(e.message || 'Error');
-  } finally {
-    closeDeleteModal();
-  }
-};
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this user?')) return;
+  // تأكيد الحذف
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
     try {
       const token = Cookies.get('accessToken');
-      const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${id}`, {
+      const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userToDelete}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (r.status === 403) {
+        toast.error("You don’t have permission to delete this user.");
+        return;
+      }
       if (!r.ok) throw new Error('Delete failed');
-      setUsers(prev => prev.filter(u => u.id !== id));
+      setUsers(prev => prev.filter(u => u.id !== userToDelete));
       toast.success('User deleted');
     } catch (e: any) {
       toast.error(e.message || 'Error');
+    } finally {
+      closeDeleteModal();
     }
   };
+
+  const handleEdit = (id: string) => {
+    router.push(`/users/edit/${id}`);
+  };
+
+  // --- Render ---
+  // حالة لا صلاحية
+  // if (!loading && forbidden) {
+  //   return (
+  //     <div className="flex h-screen bg-gray-50">
+  //       <Sidebar
+  //         isOpen={sidebarOpen}
+  //         toggleSidebar={() => setSidebarOpen(o => !o)}
+  //       />
+  //       <main className="flex-1 flex items-center justify-center">
+  //         <div className="bg-white p-6 rounded-xl shadow text-center">
+  //           <p className="text-lg font-medium text-red-600">
+  //             You don’t have permission to view users.
+  //           </p>
+  //           <button
+  //             onClick={() => router.back()}
+  //             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+  //           >
+  //             Go Back
+  //           </button>
+  //         </div>
+  //       </main>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -132,11 +160,14 @@ const confirmDelete = async () => {
                 Users
               </h1>
             </div>
-
             <button
               onClick={() => router.push('/users/create')}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-            >
+              disabled={forbidden || loading}
+              className={`flex items-center px-4 py-2 rounded-xl 
+              ${(forbidden || loading)
+                ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'}`
+              }>
               <Plus size={18} className="mr-2" />
               Add User
             </button>
@@ -175,7 +206,13 @@ const confirmDelete = async () => {
                       </div>
                     </td>
                   </tr>
-                ) : users.length > 0 ? (
+                ) : forbidden ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-red-600">
+                      You don’t have permission to view users data.
+                    </td>
+                  </tr>
+                ): users.length > 0 ? (
                   users.map(u => (
                     <tr
                       key={u.id}
@@ -217,35 +254,36 @@ const confirmDelete = async () => {
             </table>
           </div>
         </div>
+
         {/* Mobile Cards */}
         <div className="md:hidden space-y-4 px-4 pb-24">
           {loading ? (
             <div className="py-8 text-center">
               <LoadingSpinner className="h-8 w-8 text-gray-400 mx-auto" />
             </div>
-          ) : users.length > 0 ? (
+          ) : forbidden ? (
+            <div className="py-12 bg-white rounded-xl border shadow-sm text-center text-red-600">
+              You don’t have permission to view users.
+            </div>
+          ): users.length > 0 ? (
             users.map(u => (
               <div
                 key={u.id}
                 className="bg-white rounded-xl border shadow-sm p-4 cursor-pointer"
                 onClick={() => handleEdit(u.id)}
               >
-                {/* row header */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-sm font-medium text-gray-900">{u.username}</div>
                   <div className="text-xs text-gray-500">
                     {new Date(u.createdAt).toLocaleDateString()}
                   </div>
                 </div>
-                {/* email */}
                 <div className="text-sm text-blue-600 mb-2">{u.email}</div>
-                {/* role */}
                 <div className="text-sm text-gray-700 mb-4">
                   <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
                     {u.role}
                   </span>
                 </div>
-                {/* actions */}
                 <div className="flex justify-end space-x-3">
                   <button
                     onClick={e => { e.stopPropagation(); handleEdit(u.id); }}

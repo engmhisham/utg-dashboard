@@ -18,6 +18,7 @@ import {
 import Link from 'next/link';
 import ConfirmModal from '@/src/components/ConfirmModal';
 import { getImgSrc } from '@/src/utils/getImgSrc';
+import PermissionModal from '@/src/components/PermissionModal';
 
 export default function BrandsPage() {
   const router = useRouter();
@@ -32,6 +33,8 @@ export default function BrandsPage() {
   const [isLoading, setIsLoading]         = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [brandToDelete, setBrandToDelete] = useState<string|null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [unauthorizedModalOpen, setUnauthorizedModalOpen] = useState(false);
 
   const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -44,6 +47,7 @@ export default function BrandsPage() {
 
   // Open modal for given id
   const openDeleteModal = (id: string) => {
+    if (userRole !== 'admin') return showUnauthorizedPopup();
     setBrandToDelete(id);
     setDeleteModalOpen(true);
   };
@@ -77,6 +81,27 @@ export default function BrandsPage() {
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
+  }, []);
+
+  const showUnauthorizedPopup = () => setUnauthorizedModalOpen(true);
+  const closeUnauthorizedPopup = () => setUnauthorizedModalOpen(false);
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const token = Cookies.get('accessToken');
+        const res = await fetch(`${API}/auth/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setUserRole(data.data.role); // assuming the response includes { role: 'admin' | ... }
+      } catch {
+        setUserRole(null); // fallback
+      }
+    };
+  
+    fetchUserRole();
   }, []);
 
   // fetch brands
@@ -121,7 +146,10 @@ export default function BrandsPage() {
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
 
-  const handleEdit   = (id: string) => router.push(`/brands/edit/${id}`);
+    const handleEdit = (id: string) => {
+      if (userRole !== 'admin') return showUnauthorizedPopup();
+      router.push(`/brands/edit/${id}`);
+    };
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this brand?')) return;
     try {
@@ -164,8 +192,14 @@ export default function BrandsPage() {
                   </h1>
                 </div>
                 <button
-                  onClick={() => router.push('/brands/create')}
-                  className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                  onClick={() => {
+                    if (userRole !== 'admin') return showUnauthorizedPopup();
+                    router.push('/brands/create');
+                  }}
+                  disabled={isLoading || userRole !== 'admin'}
+                  className={`${isLoading || userRole !== 'admin'
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'} p-2 rounded-xl`}
                 >
                   <Plus size={18} />
                 </button>
@@ -182,8 +216,14 @@ export default function BrandsPage() {
                   </h1>
                 </div>
                 <button
-                  onClick={() => router.push('/brands/create')}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                  onClick={() => {
+                    if (userRole !== 'admin') return showUnauthorizedPopup();
+                    router.push('/brands/create');
+                  }}
+                  disabled={isLoading || userRole !== 'admin'}
+                  className={`${isLoading || userRole !== 'admin'
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'} flex items-center px-4 py-2 rounded-xl`}
                 >
                   <Plus size={18} className="mr-2" /> Add Brand
                 </button>
@@ -400,6 +440,11 @@ export default function BrandsPage() {
 
         </div>
       </main>
+      <PermissionModal
+        show={unauthorizedModalOpen}
+        message="You don’t have permission to perform this action."
+        onClose={closeUnauthorizedPopup}
+      />
       <ConfirmModal
         show={deleteModalOpen}
         message="Delete this brand?"
