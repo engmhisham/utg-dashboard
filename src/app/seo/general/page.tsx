@@ -41,6 +41,8 @@ export default function SEOGeneralPage() {
   const [facebookUrl, setFacebookUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [instagramUrl, setInstagramUrl] = useState('');
+  const [twitterUrl, setTwitterUrl] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
 
   // Submission + loading
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,6 +87,8 @@ export default function SEOGeneralPage() {
         setFacebookUrl(data.facebookUrl || '');
         setLinkedinUrl(data.linkedinUrl || '');
         setInstagramUrl(data.instagramUrl || '');
+        setTwitterUrl(data.twitterUrl || '');
+        setYoutubeUrl(data.youtubeUrl || '');
       } catch (err) {
         console.error(err);
       } finally {
@@ -153,6 +157,8 @@ export default function SEOGeneralPage() {
     setFacebookUrl('');
     setLinkedinUrl('');
     setInstagramUrl('');
+    setTwitterUrl('');
+    setYoutubeUrl('');
     setSaveStatus(null);
   };
 
@@ -494,6 +500,38 @@ export default function SEOGeneralPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       value={instagramUrl}
                       onChange={(e) => setInstagramUrl(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="youtubeUrl"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Youtube
+                    </label>
+                    <input
+                      type="url"
+                      id="youtubeUrl"
+                      placeholder="https://www.youtube.com/your-profile"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={youtubeUrl}
+                      onChange={(e) => setYoutubeUrl(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="twitterUrl"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      twitter
+                    </label>
+                    <input
+                      type="url"
+                      id="twitterUrl"
+                      placeholder="https://www.twitter.com/your-profile"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={twitterUrl}
+                      onChange={(e) => setTwitterUrl(e.target.value)}
                     />
                   </div>
                 </div>
