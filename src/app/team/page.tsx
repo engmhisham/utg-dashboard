@@ -13,7 +13,8 @@ import {
   Menu,
   PencilLine,
   Trash2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ChevronDown
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -266,17 +267,22 @@ export default function TeamPage() {
               />
               <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
             </div>
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <span className="text-sm text-gray-600">Status:</span>
-              <select
-                value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value)}
-                className="pl-3 pr-8 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="all">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium text-gray-600">Status:</span>
+              <div className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value as any)}
+                  className="appearance-none w-full pl-3 pr-12 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+                <div className="absolute right-3 top-3 -translate-y-1/2 pointer-events-none">
+                  <ChevronDown size={18} className='text-gray-700' />
+                </div>
+              </div>
             </div>
           </div>
 

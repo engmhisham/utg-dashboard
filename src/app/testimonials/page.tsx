@@ -13,7 +13,8 @@ import {
   PencilLine,
   Trash2,
   Users,
-  BookCopy
+  BookCopy,
+  ChevronDown
 } from 'lucide-react';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
@@ -256,17 +257,22 @@ export default function TestimonialsPage() {
               />
               <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Status:</span>
-              <select
-                value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value as any)}
-                className="pl-3 pr-8 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="all">All</option>
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
-              </select>
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium text-gray-600">Status:</span>
+              <div className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value as any)}
+                  className="appearance-none w-full pl-3 pr-12 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All</option>
+                  <option value="published">Published</option>
+                  <option value="draft">Draft</option>
+                </select>
+                <div className="absolute right-3 top-3 -translate-y-1/2 pointer-events-none">
+                  <ChevronDown size={18} className='text-gray-700' />
+                </div>
+              </div>
             </div>
           </div>
 

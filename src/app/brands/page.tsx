@@ -14,6 +14,7 @@ import {
   PencilLine,
   Menu,
   X,
+  ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import ConfirmModal from '@/src/components/ConfirmModal';
@@ -248,17 +249,20 @@ export default function BrandsPage() {
               <Search size={18} className="absolute left-3 top-2.5 text-gray-400"/>
             </div>
             <div className="flex items-center gap-4">
-              <div>
-                <span className="text-sm text-gray-600 mr-2">Status:</span>
+              <span className="text-sm font-medium text-gray-600">Status:</span>
+              <div className="relative">
                 <select
                   value={statusFilter}
                   onChange={e => setStatusFilter(e.target.value as any)}
-                  className="border border-gray-300 rounded-lg py-2 px-3"
+                  className="appearance-none w-full pl-3 pr-12 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">All</option>
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
+                <div className="absolute right-3 top-3 -translate-y-1/2 pointer-events-none">
+                  <ChevronDown size={18} className='text-gray-700' />
+                </div>
               </div>
             </div>
           </div>
