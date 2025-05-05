@@ -29,7 +29,13 @@ interface MediaItem {
   width?: number;
   height?: number;
   alt?: string;
+  alt_en?: string;
   title?: string;
+  title_en?: string;
+  alt_ar?: string;
+  title_ar?: string;
+  description_en?: string;
+  description_ar?: string;
   createdAt: string;
 }
 
@@ -112,7 +118,7 @@ export default function FolderImagesPage() {
       const token = Cookies.get('accessToken');
       await axios.patch(
         `${process.env.NEXT_PUBLIC_API_URL}/media/${selected.id}`,
-        { alt: altText, title: titleText },
+        { alt_en: altText, title_en: titleText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       fetchMedia(page);
@@ -268,7 +274,7 @@ export default function FolderImagesPage() {
                   src={`${process.env.NEXT_PUBLIC_UPLOAD_BASE}/${item.path}`}
                   width={item.width || 300}
                   height={item.height || 300}
-                  alt={item.alt || item.originalname}
+                  alt={item.alt_en || item.originalname}
                   className="object-cover w-full h-full aspect-square group-hover:scale-105 transition-transform"
                   placeholder="blur"
                   blurDataURL="/placeholder.png"
@@ -333,7 +339,7 @@ export default function FolderImagesPage() {
 
             <Image
               src={`${process.env.NEXT_PUBLIC_UPLOAD_BASE}/${selected.path}`}
-              alt={selected.alt || selected.originalname}
+              alt={selected.alt_en || selected.originalname}
               width={selected.width || 800}
               height={selected.height || 600}
               className="w-full h-72 object-contain bg-gray-100"
