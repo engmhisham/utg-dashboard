@@ -23,6 +23,12 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+      
+      - name: Check files before copy
+        run: |
+          ls -la
+          ls -la src
+          ls -la public
 
       # 3) نسخ ملفات السورس إلى السيرفر (من غير .next و node_modules)
       - name: Copy source files to server
