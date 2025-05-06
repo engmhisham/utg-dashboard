@@ -37,15 +37,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: |
-            package.json
-            package-lock.json
-            next.config.js
-            postcss.config.js
-            tailwind.config.js
-            tsconfig.json
-            src
-            public
+          source: 'package.json,package-lock.json,next.config.js,postcss.config.js,tailwind.config.js,tsconfig.json,src,public'
           target: /var/www/frontend
 
       # 4) بناء وتشغيل المشروع على السيرفر
