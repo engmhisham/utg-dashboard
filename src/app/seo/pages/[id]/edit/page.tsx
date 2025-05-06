@@ -50,7 +50,12 @@ export default function EditPageSeo() {
   const [saveStatus, setSaveStatus] =
     useState<null | 'success' | 'error'>(null);
 
+  const [canonicalTag, setCanonicalTag] = useState('');
+
+
   /* ───────────── Fetch current page data ───────────── */
+
+
   useEffect(() => {
     (async () => {
       try {
@@ -64,6 +69,7 @@ export default function EditPageSeo() {
         setTitle(data.title);
         setMetaTitle(data.metaTitle);
         setMetaDescription(data.metaDescription);
+        setCanonicalTag(data.canonicalTag ?? '');
       } catch (err) {
         console.error(err);
       } finally {
@@ -93,6 +99,7 @@ export default function EditPageSeo() {
           title,
           metaTitle,
           metaDescription,
+          canonicalTag,
         }),
       });
       if (!res.ok) throw new Error('Update failed');
@@ -243,6 +250,24 @@ export default function EditPageSeo() {
                   className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
+                {/* Canonical Tag */}
+                <div>
+                  <label
+                    htmlFor="canonicalTag"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Canonical Tag (optional)
+                  </label>
+                  <input
+                    id="canonicalTag"
+                    type="text"
+                    value={canonicalTag}
+                    onChange={(e) => setCanonicalTag(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://example.com/about"
+                  />
+                </div>
 
               {/* Language */}
               <div>

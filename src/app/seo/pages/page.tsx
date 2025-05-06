@@ -28,6 +28,7 @@ interface PageSeo {
   metaTitle: string;
   metaDescription: string;
   language: string;
+  canonicalTag?: string;
 }
 
 export default function SEOPagesPage() {
@@ -213,7 +214,10 @@ export default function SEOPagesPage() {
                         Title
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Page URL
+                          Page URL
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Canonical
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Meta Title
@@ -242,6 +246,9 @@ export default function SEOPagesPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                             {page.pageUrl}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 truncate max-w-xs">
+                            {page.canonicalTag || <span className="italic text-gray-400">No canonical</span>}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-900 truncate max-w-xs">
                             {page.metaTitle}
@@ -305,6 +312,14 @@ export default function SEOPagesPage() {
                         <div>
                           <span className="font-medium uppercase">URL: </span>
                           {page.pageUrl}
+                        </div>
+                        <div>
+                          <span className="font-medium uppercase">Canonical: </span>
+                          {page.canonicalTag ? (
+                            <span>{page.canonicalTag}</span>
+                          ) : (
+                            <span className="italic text-gray-400">No canonical</span>
+                          )}
                         </div>
                         <div>
                           <span className="font-medium uppercase">Meta: </span>
