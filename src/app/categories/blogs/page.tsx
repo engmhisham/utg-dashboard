@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
 import Sidebar from '@/src/components/Sidebar';
 import LoadingSpinner from '@/src/components/LoadingSpinner';
-import { ArrowLeft, Trash2, Menu, X, Tags, Plus, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Trash2, Menu, X, Tags } from 'lucide-react';
 import Link from 'next/link';
 import ConfirmModal from '@/src/components/ConfirmModal';
 import PermissionModal from '@/src/components/PermissionModal';
-import { useRouter } from 'next/navigation';
 
 interface Category {
   id: string;
@@ -17,10 +16,9 @@ interface Category {
   usedByCount: number;
 }
 
-export default function CategoriesPage() {
+export default function BlogCategoriesPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [type, setType] = useState<'blog' | 'faq'>('blog');
   const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -32,12 +30,9 @@ export default function CategoriesPage() {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-        const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/categories?type=${type}`,
-            {
-                headers: { Authorization: `Bearer ${Cookies.get('accessToken')}` },
-            },
-        );
+      const res = await fetch(`${API}/categories?type=blog`, {
+        headers: { Authorization: `Bearer ${Cookies.get('accessToken')}` },
+      });
       const data = await res.json();
       setCategories(data.data || []);
     } catch {
@@ -49,7 +44,7 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     fetchCategories();
-  }, [type]);
+  }, []);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -102,40 +97,24 @@ export default function CategoriesPage() {
           <div className="p-4 md:p-6 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {isMobile && (
-                  <button
-                      onClick={() => setSidebarOpen(o => !o)}
-                      className="p-1 bg-white rounded-full shadow border"
-                  >
-                      {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-                  </button>
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-1 bg-white rounded-full shadow border"
+                >
+                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
               )}
               <Link href="/" className="text-gray-500 hover:text-gray-700">
                 <ArrowLeft size={20} />
               </Link>
               <h1 className="text-xl md:text-2xl font-semibold flex items-center">
-                <Tags size={22} className="mr-2" /> Categories
+                <Tags size={22} className="mr-2" /> Blog Categories
               </h1>
             </div>
           </div>
         </div>
 
         <div className="mx-auto max-w-4xl px-4 pb-6">
-          <div className="mb-4 w-52">
-            <div className="relative">
-                <select
-                  value={type}
-                  onChange={e => setType(e.target.value as 'blog' | 'faq')}
-                  className="appearance-none w-full pl-3 pr-12 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="blog">Blog Categories</option>
-                  <option value="faq">FAQ Categories</option>
-                </select>
-                <div className="absolute right-3 top-3 -translate-y-1/2 pointer-events-none">
-                  <ChevronDown size={18} className='text-gray-700' />
-                </div>
-              </div>
-          </div>
-
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -183,6 +162,7 @@ export default function CategoriesPage() {
           </div>
         </div>
       </main>
+
       <ConfirmModal
         show={!!confirmDeleteId}
         message="Are you sure you want to delete this category?"

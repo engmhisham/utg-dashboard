@@ -66,6 +66,10 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   useEffect(() => {
     if (isMobile && isOpen) {
       toggleSidebar();
+    }else if (pathname.startsWith('/blogs') || pathname.startsWith('/categories')) {
+      setActiveSubmenu('blogs');
+    } else if (pathname.startsWith('/faqs')) {
+      setActiveSubmenu('faqs');
     }
   }, [pathname]);
 
@@ -113,15 +117,26 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
     },
     { text: 'Emails',       href: '/emails',      icon: <Mails size={16}/> },
     { text: 'Contact',      href: '/contact',     icon: <BookUser size={16}/> },
-    { text: 'Blogs',        href: '/blogs',       icon: <Rss size={16}/> },
+    {
+      text: 'Blogs', icon: <Rss size={16}/>,
+      submenu: [
+        { text: 'Blogs List', href: '/blogs', icon: <Rss size={16}/> },
+        { text: 'Categories', href: '/categories/blogs', icon: <Tags size={16}/> },
+      ]
+    },
     { text: 'Clients',      href: '/clients',     icon: <UsersRound size={16}/> },
     { text: 'Projects',     href: '/projects',    icon: <Boxes size={16}/> },
     { text: 'Team',         href: '/team',        icon: <UsersRound size={16}/> },
     { text: 'Testimonials', href: '/testimonials',icon: <BookCopy size={16}/> },
     { text: 'Brands',       href: '/brands',      icon: <Box size={16}/> },
-    { text: 'FAQs',         href: '/faqs',        icon: <MessageCircleQuestion size={16}/> },
+    {
+      text: 'FAQs', icon: <MessageCircleQuestion size={16}/>,
+      submenu: [
+        { text: 'FAQs List', href: '/faqs', icon: <MessageCircleQuestion size={16}/> },
+        { text: 'Categories', href: '/categories/faqs', icon: <Tags size={16}/> },
+      ]
+    },
     { text: 'Media',        href: '/media',       icon: <ImageIcon size={16}/>, badge: 'New' },
-    { text: 'Categories',   href: '/categories',        icon: <Tags size={16}/>, badge: 'New' },
   ];
 
   const matches = (label: string) =>
@@ -198,7 +213,6 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
                     onClick={() => (item as any).submenu && toggleSubmenu(key)}
                     className="
                       text-sm m-2
-                      border-l-4 border-transparent 
                       hover:bg-white 
                       hover:border-l-4 hover:border-gray-300
                     "
