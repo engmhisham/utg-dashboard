@@ -83,7 +83,12 @@ export default function BlogsPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories?type=blog`);
+      const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/categories?type=blog`,
+                {
+                    headers: { Authorization: `Bearer ${Cookies.get('accessToken')}` },
+                },
+            );
       const data = await res.json();
       setCategories(data.data || []);
     } catch {

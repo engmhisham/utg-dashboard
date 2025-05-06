@@ -23,6 +23,7 @@ import {
   Image as ImageIcon,
   Users,
   LogOut as LogoutIcon,
+  Tags,
 } from 'lucide-react';
 import NavItem from './nav/NavItem';
 import SubNavItem from './nav/SubNavItem';
@@ -120,6 +121,7 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
     { text: 'Media',        href: '/media',       icon: <ImageIcon size={16}/>, badge: 'New' },
     { text: 'Contact',      href: '/contact',     icon: <BookUser size={16}/> },
     { text: 'FAQs',         href: '/faqs',        icon: <MessageCircleQuestion size={16}/> },
+    { text: 'Categories',         href: '/categories',        icon: <Tags size={16}/> },
   ];
 
   const matches = (label: string) =>
