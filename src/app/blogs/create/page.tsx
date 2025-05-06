@@ -46,6 +46,7 @@ export default function BlogCreatePage() {
     description_ar: '',
     content_ar: '{}',
     coverImageUrl: '',
+    categoryId: '',
   });
 
   // File state (deferred upload + preview)
@@ -54,9 +55,25 @@ export default function BlogCreatePage() {
 
   // Content images for deferred upload
   const [contentImages, setContentImages] = useState<Map<string, File>>(new Map());
+  const [categories, setCategories] = useState<any[]>([]);
 
   // Editor ref
   const editorInstanceRef = useRef<any>(null);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories?type=blog`);
+      const data = await res.json();
+      setCategories(data.data || []);
+    } catch {
+      toast.error('Failed to load categories');
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+  
 
   // Responsiveness
   useEffect(() => {
@@ -278,6 +295,20 @@ export default function BlogCreatePage() {
                   onChange={e => handle('slug', e.target.value)}
                   className="w-full border rounded-lg p-3"
                 />
+              </div>
+              <div className="flex-1 mb-4 md:mb-0">
+                <label className="block text-sm font-medium mb-1">Category *</label>
+                <select
+                  required
+                  value={form.categoryId}
+                  onChange={e => handle('categoryId', e.target.value)}
+                  className="w-full border rounded-lg p-3"
+                >
+                  <option value="">Select category</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">

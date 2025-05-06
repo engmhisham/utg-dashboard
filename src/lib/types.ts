@@ -31,6 +31,11 @@ export interface Blog {
   publishedAt?:  string;
   createdAt:     string;
   updatedAt:     string;
+  categoryId?: string;
+  category?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 export interface MediaItem {

@@ -56,6 +56,9 @@ export default function BlogEditPage() {
   // Form and loading state
   const [activeLang, setActiveLang] = useState<Lang>('en');
   const [loading, setLoading]       = useState(true);
+
+  const [categories, setCategories] = useState<any[]>([]);
+
   const [form, setForm] = useState({
     slug: '',
     status: 'draft',
@@ -66,6 +69,7 @@ export default function BlogEditPage() {
     description_ar: '',
     content_ar: '{}',
     coverImageUrl: '', // full URL to show in <img>
+    categoryId: '',
   });
 
   // Helpers
@@ -116,6 +120,21 @@ export default function BlogEditPage() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch(`${API_URL}/categories?type=blog`);
+      const data = await res.json();
+      setCategories(data.data || []);
+    } catch {
+      toast.error('Failed to load categories');
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
   // Load existing blog data (EN + AR)
   useEffect(() => {
     if (!id) return;
@@ -145,6 +164,7 @@ export default function BlogEditPage() {
           description_ar: arJson.data.description,
           content_ar:     arJson.data.content,
           coverImageUrl:  getImgSrc(enJson.data.coverImageUrl),
+          categoryId: enJson.data.category?.id || '',
         });
 
         // Clear any previously pending file
@@ -364,6 +384,19 @@ export default function BlogEditPage() {
                   onChange={(e) => handle('slug', e.target.value)}
                   className="w-full border rounded-lg p-3"
                 />
+              </div>
+              <div className="flex-1 mb-4 md:mb-0">
+                <label className="block text-sm font-medium mb-1">Category</label>
+                <select
+                  value={form.categoryId}
+                  onChange={(e) => handle('categoryId', e.target.value)}
+                  className="w-full border rounded-lg p-3"
+                >
+                  <option value="">Select category</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">

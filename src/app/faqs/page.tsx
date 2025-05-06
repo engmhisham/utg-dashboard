@@ -22,16 +22,11 @@ import toast from 'react-hot-toast';
 import ConfirmModal from '@/src/components/ConfirmModal';
 import PermissionModal from '@/src/components/PermissionModal';
 
-const categories = [
-  { id: 'general', name: 'General' },
-  { id: 'technical', name: 'Technical' },
-  { id: 'services', name: 'Services' },
-];
-
 export default function FAQsPage() {
   const router = useRouter();
 
   const [faqs, setFaqs] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
@@ -43,8 +38,24 @@ export default function FAQsPage() {
   const [faqToDelete, setFaqToDelete] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [unauthorizedModalOpen, setUnauthorizedModalOpen] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/categories?type=faq`);
+      const data = await res.json();
+      setCategories(data.data || []);
+    } catch {
+      toast.error('Failed to load FAQ categories');
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const openDeleteModal = (id: string) => {
     if (userRole !== 'admin') return showUnauthorizedPopup();
@@ -59,10 +70,10 @@ export default function FAQsPage() {
     if (!faqToDelete) return;
     const token = Cookies.get('accessToken');
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/faqs/${faqToDelete}`,
-        { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await fetch(`${API_BASE_URL}/faqs/${faqToDelete}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error();
       setFaqs(faqs.filter(f => f.id !== faqToDelete));
       toast.success('FAQ deleted');
@@ -73,7 +84,6 @@ export default function FAQsPage() {
     }
   };
 
-  // viewport check
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -88,21 +98,19 @@ export default function FAQsPage() {
     const fetchUserRole = async () => {
       try {
         const token = Cookies.get('accessToken');
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile`, {
+        const res = await fetch(`${API_BASE_URL}/auth/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error();
         const data = await res.json();
-        setUserRole(data.data.role); // assuming the response includes { role: 'admin' | ... }
+        setUserRole(data.data.role);
       } catch {
-        setUserRole(null); // fallback
+        setUserRole(null);
       }
     };
-
     fetchUserRole();
   }, []);
 
-  // fetch FAQs
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -113,14 +121,13 @@ export default function FAQsPage() {
         if (selectedCategory) params.append('category', selectedCategory);
 
         const res = await fetch(`${API_BASE_URL}/faqs?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) throw new Error('Failed to fetch FAQs');
+        if (!res.ok) throw new Error();
         const result = await res.json();
         setFaqs(result.data?.items || []);
-      } catch (err) {
-        console.error(err);
-        toast.error('Failed to fetch FAQs.');
+      } catch {
+        toast.error('Failed to fetch FAQs');
       } finally {
         setLoading(false);
       }
@@ -141,28 +148,11 @@ export default function FAQsPage() {
     router.push(`/faqs/edit/${id}`);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this FAQ?')) return;
-    const token = Cookies.get('accessToken');
-    try {
-      const res = await fetch(`${API_BASE_URL}/faqs/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error();
-      setFaqs(prev => prev.filter(faq => faq.id !== id));
-      toast.success('FAQ deleted');
-    } catch {
-      toast.error('Failed to delete FAQ');
-    }
-  };
-
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(o => !o)} />
 
       <main className="flex-1 overflow-y-auto">
-        {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200 p-4 md:p-6 flex justify-between items-center">
           <div className="flex items-center gap-2">
             {isMobile && (
@@ -197,7 +187,6 @@ export default function FAQsPage() {
         </div>
 
         <div className="mx-auto max-w-7xl px-4 pb-24 md:pb-6">
-          {/* Search & Filters */}
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
             <div className="relative w-full md:w-1/3">
               <input
@@ -221,40 +210,49 @@ export default function FAQsPage() {
                   <option value="ar">Arabic</option>
                 </select>
                 <div className="absolute right-3 top-3 -translate-y-1/2 pointer-events-none">
-                  <ChevronDown size={18} className='text-gray-700' />
+                  <ChevronDown size={18} className="text-gray-700" />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Categories */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={`px-3 py-1 rounded-full text-sm ${
-                selectedCategory === null
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              All Categories
-            </button>
-            {categories.map(cat => (
+          {/* Categories from API */}
+          <div className="flex justify-between flex-wrap gap-2 mb-6 items-center">
+            <div className="flex flex-wrap gap-2">
               <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1 rounded-full text-sm ${
-                  selectedCategory === cat.id
+                onClick={() => setSelectedCategory(null)}
+                className={`px-3 py-1 rounded-full text-sm ${selectedCategory === null
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+                  }`}
               >
-                {cat.name}
+                All Categories
               </button>
-            ))}
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-3 py-1 rounded-full text-sm ${selectedCategory === cat.id
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowCategoryModal(true)}
+              className="bg-gray-100 text-gray-800 px-3 py-2 rounded-xl hover:bg-gray-200 text-sm"
+            >
+              + Add Category
+            </button>
           </div>
 
-          {/* FAQ List */}
+          
+
+          {/* FAQs List */}
           <div className="space-y-4">
             {loading ? (
               <div className="flex justify-center py-8">
@@ -275,7 +273,7 @@ export default function FAQsPage() {
                           }`}
                         />
                         <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                          {faq.category}
+                          {faq.category?.name}
                         </span>
                       </div>
                       <h3 className="font-medium text-gray-900 mt-1">{faq.question}</h3>
@@ -319,6 +317,54 @@ export default function FAQsPage() {
           </div>
         </div>
       </main>
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-4">Add FAQ Category</h2>
+            <input
+              type="text"
+              placeholder="Category name"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg p-2 mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowCategoryModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const token = Cookies.get('accessToken');
+                  try {
+                    const res = await fetch(`${API_BASE_URL}/categories`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({ name: newCategoryName, type: 'faq' }),
+                    });
+                    if (!res.ok) throw new Error();
+                    toast.success('Category added');
+                    setShowCategoryModal(false);
+                    setNewCategoryName('');
+                    await fetchCategories(); // reload
+                  } catch {
+                    toast.error('Failed to add category');
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <PermissionModal
         show={unauthorizedModalOpen}
         message="You don’t have permission to perform this action."
@@ -331,5 +377,7 @@ export default function FAQsPage() {
         onCancel={closeDeleteModal}
       />
     </div>
+    
   );
 }
+

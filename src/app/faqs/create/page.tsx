@@ -1,9 +1,10 @@
 'use client';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../../../components/Sidebar';
 import {
-  ArrowLeft, Plus, Menu, X, UsersRound
+  ArrowLeft, Plus, Menu, X
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -13,7 +14,7 @@ export default function FaqCreatePage() {
   const router = useRouter();
 
   const [formData, setFormData] = useState({
-    category: 'general',
+    categoryId: '',
     status: 'active',
     question_en: '',
     answer_en: '',
@@ -21,6 +22,7 @@ export default function FaqCreatePage() {
     answer_ar: ''
   });
 
+  const [categories, setCategories] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,6 +34,22 @@ export default function FaqCreatePage() {
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/categories?type=faq`);
+        const data = await res.json();
+        setCategories(data.data || []);
+        if (data.data?.length > 0) {
+          setFormData(prev => ({ ...prev, categoryId: data.data[0].id }));
+        }
+      } catch {
+        toast.error('Failed to load categories');
+      }
+    };
+    fetchCategories();
   }, []);
 
   const handleChange = (
@@ -74,7 +92,6 @@ export default function FaqCreatePage() {
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
       <main className="flex-1 overflow-y-auto">
-        {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200 p-4 md:p-6 flex justify-between items-center">
           <div className="flex items-center gap-2">
             {isMobile && (
@@ -96,14 +113,17 @@ export default function FaqCreatePage() {
               <div>
                 <label className="block text-sm font-medium mb-1">Category</label>
                 <select
-                  name="category"
-                  value={formData.category}
+                  name="categoryId"
+                  value={formData.categoryId}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-lg p-3"
+                  required
                 >
-                  <option value="general">General</option>
-                  <option value="technical">Technical</option>
-                  <option value="services">Services</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

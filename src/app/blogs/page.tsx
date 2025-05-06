@@ -19,6 +19,7 @@ import {
   Rss,
   ChevronDown
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { Blog, BlogStatus } from '@/src/lib/types';
 import { getImgSrc } from '@/src/utils/getImgSrc';
@@ -37,6 +38,11 @@ export default function BlogsPage() {
   // modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [blogToDelete, setBlogToDelete] = useState<string | null>(null);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+
 
   const openDeleteModal = (id: string) => {
     setBlogToDelete(id);
@@ -75,14 +81,33 @@ export default function BlogsPage() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories?type=blog`);
+      const data = await res.json();
+      setCategories(data.data || []);
+    } catch {
+      console.error('Failed to fetch categories');
+    }
+  };
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+  
+
   // fetch blogs
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
+        const params = new URLSearchParams();
+        params.append('language', 'en');
+        params.append('sortBy', 'createdAt');
+        params.append('sortOrder', 'DESC');
+        if (selectedCategory) params.append('category', selectedCategory);
         const token = Cookies.get('accessToken');
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/blogs?language=en&sortBy=createdAt&sortOrder=DESC`,
+          `${process.env.NEXT_PUBLIC_API_URL}/blogs?${params.toString()}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (!res.ok) throw new Error('Failed to fetch blogs');
@@ -94,7 +119,7 @@ export default function BlogsPage() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [selectedCategory]);
 
   // filter & select helpers
   const toggleSelect = (id: string) =>
@@ -225,6 +250,39 @@ export default function BlogsPage() {
             </div>
           </div>
 
+          <div className="flex justify-between flex-wrap gap-2 mb-6 items-center">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`px-3 py-1 rounded-full text-sm ${selectedCategory === null
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+            >
+              All Categories
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3 py-1 rounded-full text-sm ${selectedCategory === cat.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+          <button
+              onClick={() => setShowCategoryModal(true)}
+              className="bg-gray-100 text-gray-800 px-3 py-2 rounded-xl hover:bg-gray-200 text-sm"
+            >
+              + Add Category
+            </button>
+          </div>
+
+
           {/* Desktop Table */}
           <div className="hidden md:block bg-white rounded-xl shadow-sm border overflow-hidden mb-6">
             <div className="overflow-x-auto">
@@ -242,6 +300,9 @@ export default function BlogsPage() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Category
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Date
@@ -296,6 +357,19 @@ export default function BlogsPage() {
                             }`}
                           >
                             {b.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`p-2 inline-flex text-xs font-semibold rounded-full ${
+                              b.category?.name === `${b.category?.name}`
+                                ? 'bg-green-100 text-green-800'
+                                : b.category?.name === 'Uncategorized'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {b.category?.name || 'Uncategorized'}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">
@@ -416,6 +490,53 @@ export default function BlogsPage() {
 
         </div>
       </main>
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-4">Add Blog Category</h2>
+            <input
+              type="text"
+              placeholder="Category name"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg p-2 mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowCategoryModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const token = Cookies.get('accessToken');
+                  try {
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({ name: newCategoryName, type: 'blog' }),
+                    });
+                    if (!res.ok) throw new Error();
+                    toast.success('Category added');
+                    setShowCategoryModal(false);
+                    setNewCategoryName('');
+                    await fetchCategories(); // reload
+                  } catch {
+                    toast.error('Failed to add category');
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <ConfirmModal
         show={deleteModalOpen}
         message="Delete this blog?"

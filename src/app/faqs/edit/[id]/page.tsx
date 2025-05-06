@@ -15,7 +15,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/a
 type Lang = 'en' | 'ar';
 
 interface FaqForm {
-  category: 'general' | 'technical' | 'services';
+  categoryId: string;
   status: 'active' | 'inactive';
   question_en: string;
   answer_en: string;
@@ -27,13 +27,13 @@ export default function FaqEditPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  /* state ------------------------------------------------------------- */
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isMobile,    setIsMobile]    = useState(false);
-  const [loading,     setLoading]     = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<any[]>([]);
 
   const [form, setForm] = useState<FaqForm>({
-    category: 'general',
+    categoryId: '',
     status: 'active',
     question_en: '',
     answer_en: '',
@@ -44,7 +44,6 @@ export default function FaqEditPage() {
   const handle = (field: keyof FaqForm, v: string) =>
     setForm(prev => ({ ...prev, [field]: v }));
 
-  /* helpers ----------------------------------------------------------- */
   useEffect(() => {
     const fx = () => setIsMobile(window.innerWidth < 768);
     fx();
@@ -52,7 +51,19 @@ export default function FaqEditPage() {
     return () => window.removeEventListener('resize', fx);
   }, []);
 
-  /* fetch both language versions ------------------------------------- */
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/categories?type=faq`);
+        const data = await res.json();
+        setCategories(data.data || []);
+      } catch {
+        toast.error('Failed to load categories');
+      }
+    };
+    fetchCategories();
+  }, []);
+
   useEffect(() => {
     if (!id) return;
     (async () => {
@@ -60,27 +71,23 @@ export default function FaqEditPage() {
       try {
         const token = Cookies.get('accessToken');
 
-        // EN
         const enRes = await fetch(`${API_BASE_URL}/faqs/${id}?language=en`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (!enRes.ok) throw new Error('Failed to load FAQ (en)');
         const en = (await enRes.json()).data;
 
-        // AR
         const arRes = await fetch(`${API_BASE_URL}/faqs/${id}?language=ar`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (!arRes.ok) throw new Error('Failed to load FAQ (ar)');
         const ar = (await arRes.json()).data;
 
         setForm({
-          category: en.category,
-          status:   en.status,
+          categoryId: en.category?.id || '',
+          status: en.status,
           question_en: en.question,
-          answer_en:   en.answer,
+          answer_en: en.answer,
           question_ar: ar?.question || '',
-          answer_ar:   ar?.answer   || ''
+          answer_ar: ar?.answer || ''
         });
       } catch (e: any) {
         toast.error(e.message || 'Error loading FAQ');
@@ -90,7 +97,6 @@ export default function FaqEditPage() {
     })();
   }, [id]);
 
-  /* submit ------------------------------------------------------------ */
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -104,30 +110,24 @@ export default function FaqEditPage() {
         body: JSON.stringify(form)
       });
       if (!res.ok) throw new Error((await res.json()).message || 'Failed');
-      toast.success('FAQ   updated');
+      toast.success('FAQ updated');
       router.push('/faqs');
     } catch (err: any) {
       toast.error(err.message || 'Something went wrong!');
     }
   };
 
-  /* cancel ------------------------------------------------------------ */
   const cancel = () => router.push('/faqs');
 
-  /* ------------------------------------------------------------------ */
   if (loading) {
     return <div className="flex h-screen items-center justify-center">Loading FAQ…</div>;
   }
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar
-        isOpen={sidebarOpen}
-        toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-      />
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
       <main className="flex-1 overflow-y-auto">
-        {/* header */}
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200 p-4 md:p-6 flex justify-between items-center">
           <div className="flex items-center gap-2">
             {isMobile && (
@@ -148,22 +148,23 @@ export default function FaqEditPage() {
           </div>
         </div>
 
-        {/* form */}
         <div className="mx-auto max-w-4xl px-4 pb-20">
           <form onSubmit={submit} className="space-y-6">
-            {/* meta */}
             <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Category</label>
                 <select
-                  name="category"
-                  value={form.category}
-                  onChange={e => handle('category', e.target.value)}
+                  name="categoryId"
+                  value={form.categoryId}
+                  onChange={e => handle('categoryId', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg p-3"
                 >
-                  <option value="general">General</option>
-                  <option value="technical">Technical</option>
-                  <option value="services">Services</option>
+                  <option value="">Select category</option>
+                  {Array.isArray(categories) && categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -181,7 +182,7 @@ export default function FaqEditPage() {
               </div>
             </div>
 
-            {/* english */}
+            {/* English section */}
             <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
               <h2 className="text-lg font-medium">English</h2>
               <div>
@@ -205,7 +206,7 @@ export default function FaqEditPage() {
               </div>
             </div>
 
-            {/* arabic */}
+            {/* Arabic section */}
             <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
               <h2 className="text-lg font-medium">Arabic</h2>
               <div>
@@ -231,7 +232,6 @@ export default function FaqEditPage() {
               </div>
             </div>
 
-            {/* buttons */}
             <div className="flex justify-end gap-3">
               <button
                 type="button"
