@@ -114,7 +114,6 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
     { text: 'Emails',       href: '/emails',      icon: <Mails size={16}/> },
     { text: 'Contact',      href: '/contact',     icon: <BookUser size={16}/> },
     { text: 'Blogs',        href: '/blogs',       icon: <Rss size={16}/> },
-    { text: 'Categories',         href: '/categories',        icon: <Tags size={16}/>, badge: 'New' },
     { text: 'Media',        href: '/media',       icon: <ImageIcon size={16}/>, badge: 'New' },
     { text: 'Clients',      href: '/clients',     icon: <UsersRound size={16}/> },
     { text: 'Projects',     href: '/projects',    icon: <Boxes size={16}/> },
@@ -122,6 +121,7 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
     { text: 'Testimonials', href: '/testimonials',icon: <BookCopy size={16}/> },
     { text: 'Brands',       href: '/brands',      icon: <Box size={16}/> },
     { text: 'FAQs',         href: '/faqs',        icon: <MessageCircleQuestion size={16}/> },
+    { text: 'Categories',   href: '/categories',        icon: <Tags size={16}/>, badge: 'New' },
   ];
 
   const matches = (label: string) =>
