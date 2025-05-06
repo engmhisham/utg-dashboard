@@ -11,32 +11,39 @@ jobs:
     env:
       NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
       NEXT_PUBLIC_UPLOAD_BASE: ${{ secrets.NEXT_PUBLIC_UPLOAD_BASE }}
+
     steps:
+      # 1) استنساخ الكود
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2) تهيئة Node.js (فقط لو هتحتاج تستخدم أو تتأكد من الكاش)
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Build project
-        run: npm run build
-
-      - name: Copy SSR files to server
+      # 3) نسخ ملفات السورس إلى السيرفر (من غير .next و node_modules)
+      - name: Copy source files to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: ".next/,package.json,next.config.js,public/"
-          target: "/var/www/frontend"
+          source: |
+            package.json
+            package-lock.json
+            next.config.js
+            postcss.config.js
+            tailwind.config.js
+            tsconfig.json
+            src/
+            public/
+          target: /var/www/frontend
 
-      - name: Start or reload frontend via PM2
+      # 4) بناء وتشغيل المشروع على السيرفر
+      - name: Build and start frontend on server
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -45,5 +52,6 @@ jobs:
           script: |
             cd /var/www/frontend
             npm ci --only=production
+            npm run build
             pm2 delete frontend || true
             pm2 start npm --name frontend -- start
