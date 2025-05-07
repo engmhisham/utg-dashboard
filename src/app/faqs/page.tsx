@@ -40,6 +40,8 @@ export default function FAQsPage() {
   const [unauthorizedModalOpen, setUnauthorizedModalOpen] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryNameEn, setNewCategoryNameEn] = useState('');
+  const [newCategoryNameAr, setNewCategoryNameAr] = useState('');
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -242,7 +244,7 @@ export default function FAQsPage() {
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                 >
-                  {cat.name}
+                  {cat.name_en}
                 </button>
               ))}
             </div>
@@ -328,9 +330,16 @@ export default function FAQsPage() {
             <h2 className="text-lg font-semibold mb-4">Add FAQ Category</h2>
             <input
               type="text"
-              placeholder="Category name"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="Category name (English)"
+              value={newCategoryNameEn}
+              onChange={(e) => setNewCategoryNameEn(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg p-2 mb-2"
+            />
+            <input
+              type="text"
+              placeholder="Category name (Arabic)"
+              value={newCategoryNameAr}
+              onChange={(e) => setNewCategoryNameAr(e.target.value)}
               className="w-full border border-gray-300 rounded-lg p-2 mb-4"
             />
             <div className="flex justify-end gap-2">
@@ -350,7 +359,7 @@ export default function FAQsPage() {
                         'Content-Type': 'application/json',
                         Authorization: `Bearer ${token}`,
                       },
-                      body: JSON.stringify({ name: newCategoryName, type: 'faq' }),
+                      body: JSON.stringify({ name_en: newCategoryNameEn, name_ar: newCategoryNameAr, type: 'faq' }),
                     });
                     if (!res.ok) throw new Error();
                     toast.success('Category added');

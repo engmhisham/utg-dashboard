@@ -123,7 +123,12 @@ export default function BlogEditPage() {
   
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${API_URL}/categories?type=blog`);
+      const res = await fetch(
+        `${API_URL}/categories?type=blog`,
+        {
+            headers: { Authorization: `Bearer ${Cookies.get('accessToken')}` },
+        },
+    );
       const data = await res.json();
       setCategories(data.data || []);
     } catch {
@@ -394,7 +399,7 @@ export default function BlogEditPage() {
                 >
                   <option value="">Select category</option>
                   {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    <option key={cat.id} value={cat.id}>{cat.name_en}</option>
                   ))}
                 </select>
               </div>

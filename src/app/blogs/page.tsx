@@ -42,6 +42,8 @@ export default function BlogsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryNameEn, setNewCategoryNameEn] = useState('');
+  const [newCategoryNameAr, setNewCategoryNameAr] = useState('');
 
 
   const openDeleteModal = (id: string) => {
@@ -275,7 +277,7 @@ export default function BlogsPage() {
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
               >
-                {cat.name}
+                {cat.name_en}
               </button>
             ))}
           </div>
@@ -501,9 +503,16 @@ export default function BlogsPage() {
             <h2 className="text-lg font-semibold mb-4">Add Blog Category</h2>
             <input
               type="text"
-              placeholder="Category name"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="Category name (English)"
+              value={newCategoryNameEn}
+              onChange={(e) => setNewCategoryNameEn(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg p-2 mb-2"
+            />
+            <input
+              type="text"
+              placeholder="Category name (Arabic)"
+              value={newCategoryNameAr}
+              onChange={(e) => setNewCategoryNameAr(e.target.value)}
               className="w-full border border-gray-300 rounded-lg p-2 mb-4"
             />
             <div className="flex justify-end gap-2">
@@ -523,7 +532,7 @@ export default function BlogsPage() {
                         'Content-Type': 'application/json',
                         Authorization: `Bearer ${token}`,
                       },
-                      body: JSON.stringify({ name: newCategoryName, type: 'blog' }),
+                      body: JSON.stringify({ name_en: newCategoryNameEn, name_ar: newCategoryNameAr, type: 'blog' }),
                     });
                     if (!res.ok) throw new Error();
                     toast.success('Category added');
