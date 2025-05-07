@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
 import Sidebar from '@/src/components/Sidebar';
 import LoadingSpinner from '@/src/components/LoadingSpinner';
-import { ArrowLeft, Trash2, Menu, X, Tags, Plus } from 'lucide-react';
+import { ArrowLeft, Trash2, Menu, X, Tags, Plus, PencilLine } from 'lucide-react';
 import Link from 'next/link';
 import ConfirmModal from '@/src/components/ConfirmModal';
 import PermissionModal from '@/src/components/PermissionModal';
@@ -31,6 +31,8 @@ export default function BlogCategoriesPage() {
   const [newCategoryNameEn, setNewCategoryNameEn] = useState('');
   const [newCategoryNameAr, setNewCategoryNameAr] = useState('');
 
+  const [editCategory, setEditCategory] = useState<Category | null>(null);
+
   const API = process.env.NEXT_PUBLIC_API_URL;
 
   const fetchCategories = async () => {
@@ -51,6 +53,16 @@ export default function BlogCategoriesPage() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    if (editCategory) {
+      setNewCategoryNameEn(editCategory.name_en);
+      setNewCategoryNameAr(editCategory.name_ar);
+    } else {
+      setNewCategoryNameEn('');
+      setNewCategoryNameAr('');
+    }
+  }, [editCategory, showCategoryModal]);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -182,6 +194,15 @@ export default function BlogCategoriesPage() {
                       <td className="px-6 py-4 text-sm text-gray-500">{cat.usedByCount}</td>
                       <td className="px-6 py-4 text-right">
                         <button
+                          className="text-indigo-600 hover:text-indigo-900 mr-2"
+                          onClick={() => {
+                            setEditCategory(cat); 
+                            setShowCategoryModal(true);
+                          }}
+                        >
+                          <PencilLine size={16} />
+                        </button>
+                        <button
                           disabled={cat.usedByCount > 0}
                           onClick={() => {
                             if (userRole !== 'admin') return showUnauthorizedPopup();
@@ -204,7 +225,9 @@ export default function BlogCategoriesPage() {
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center">
           <div className="bg-white rounded-lg shadow-lg p-6 w-11/12 max-w-md">
-            <h2 className="text-lg font-semibold mb-4">Add Blog Category</h2>
+            <h2 className="text-lg font-semibold mb-4">
+              {editCategory ? 'Edit Blog Category' : 'Add Blog Category'}
+            </h2>
             <input
               type="text"
               placeholder="Category name (English)"
@@ -221,7 +244,10 @@ export default function BlogCategoriesPage() {
             />
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setShowCategoryModal(false)}
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setEditCategory(null);
+                }}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700"
               >
                 Cancel
@@ -229,28 +255,54 @@ export default function BlogCategoriesPage() {
               <button
                 onClick={async () => {
                   const token = Cookies.get('accessToken');
+
                   try {
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories`, {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
-                      },
-                      body: JSON.stringify({ name_en: newCategoryNameEn, name_ar: newCategoryNameAr, type: 'blog' }),
-                    });
+                    let res;
+
+                    if (editCategory) {
+                      // تعديل
+                      res = await fetch(`${API}/categories/${editCategory.id}`, {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({
+                          name_en: newCategoryNameEn,
+                          name_ar: newCategoryNameAr,
+                        }),
+                      });
+                    } else {
+                      // إضافة
+                      res = await fetch(`${API}/categories`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({
+                          name_en: newCategoryNameEn,
+                          name_ar: newCategoryNameAr,
+                          type: 'blog',
+                        }),
+                      });
+                    }
+
                     if (!res.ok) throw new Error();
-                    toast.success('Category added');
+
+                    toast.success(editCategory ? 'Category updated' : 'Category added');
                     setShowCategoryModal(false);
-                    setNewCategoryName('');
+                    setEditCategory(null); // reset
                     await fetchCategories(); // reload
                   } catch {
-                    toast.error('Failed to add category');
+                    toast.error(editCategory ? 'Failed to update category' : 'Failed to add category');
                   }
                 }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 Save
               </button>
+
             </div>
           </div>
         </div>
