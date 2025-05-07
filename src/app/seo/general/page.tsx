@@ -382,13 +382,12 @@ export default function SEOGeneralPage() {
               </section>
 
               {/* Tracking */}
-              <section className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-6">
+              {/* <section className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-6">
                 <h2 className="text-lg font-medium mb-4">Tracking</h2>
                 <p className="text-gray-500 text-sm mb-4">
                   Configure additional tracking options and preferences.
                 </p>
 
-                {/* Meta Tracking */}
                 <div className="flex items-center justify-between py-3 border-b border-gray-100">
                   <div>
                     <h3 className="text-sm font-medium text-gray-700">
@@ -417,7 +416,6 @@ export default function SEOGeneralPage() {
                   </div>
                 </div>
 
-                {/* LinkedIn Tracking */}
                 <div className="flex items-center justify-between py-3">
                   <div>
                     <h3 className="text-sm font-medium text-gray-700">
@@ -445,7 +443,7 @@ export default function SEOGeneralPage() {
                     />
                   </div>
                 </div>
-              </section>
+              </section> */}
 
               {/* Social Links */}
               <section className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-6">

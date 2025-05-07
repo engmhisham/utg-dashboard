@@ -395,12 +395,12 @@ export default function FolderImagesPage() {
                   <Clipboard size={14} />
                   {copied ? 'Copied' : 'Copy URL'}
                 </button>
-                <button
+                {/* <button
                   onClick={() => deleteMedia(selected.id)}
                   className="inline-flex items-center gap-1 rounded bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm font-medium transition"
                 >
                   <Trash2 size={16} /> Delete
-                </button>
+                </button> */}
                 <button
                   onClick={saveMetadata}
                   className="inline-flex items-center gap-1 rounded bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm font-medium transition"
