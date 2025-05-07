@@ -39,7 +39,12 @@ export default function FaqCreatePage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/categories?type=faq`);
+        const res = await fetch(
+                        `${process.env.NEXT_PUBLIC_API_URL}/categories?type=faq`,
+                        {
+                            headers: { Authorization: `Bearer ${Cookies.get('accessToken')}` },
+                        },
+                    );
         const data = await res.json();
         setCategories(data.data || []);
         if (data.data?.length > 0) {
@@ -121,7 +126,7 @@ export default function FaqCreatePage() {
                 >
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.id}>
-                      {cat.name}
+                      {cat.name_en}
                     </option>
                   ))}
                 </select>
