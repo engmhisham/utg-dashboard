@@ -280,7 +280,7 @@ export default function FAQsPage() {
                           }`}
                         />
                         <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                          {faq.category?.name}
+                          {faq.category?.name_en}
                         </span>
                       </div>
                       <h3 className="font-medium text-gray-900 mt-1">{faq.question}</h3>
