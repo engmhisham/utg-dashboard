@@ -239,7 +239,7 @@ export default function LocationsPage() {
                         <button onClick={() => handleEdit(loc.id)} className="text-indigo-600 hover:text-indigo-900 mr-2">
                           <PencilLine size={16} />
                         </button>
-                        <button onClick={() => openDeleteModal(loc.id)} className="text-red-600 hover:text-red-900">
+                        <button onClick={e => {e.stopPropagation(); openDeleteModal(loc.id)}} className="text-red-600 hover:text-red-900">
                           <Trash2 size={16} />
                         </button>
                       </td>
