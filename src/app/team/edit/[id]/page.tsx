@@ -71,10 +71,10 @@ export default function TeamEditPage() {
         setForm({
           status:   data.status,
           cover:    data.coverImageUrl,
-          name_en:  data.name,
-          title_en: data.title,
-          name_ar:  data.name,
-          title_ar: data.title,
+          name_en:  data.name_en,
+          title_en: data.title_en,
+          name_ar:  data.name_ar,
+          title_ar: data.title_ar,
         });
         setPreviewUrl(data.coverImageUrl);
       } catch {

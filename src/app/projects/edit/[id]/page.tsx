@@ -67,11 +67,11 @@ export default function ProjectEditPage() {
         const { data } = await res.json();
 
         setForm({
-          title_en:       data.title,
-          description_en: data.description,
-          url_en:         data.url,
-          title_ar:       data.title,
-          description_ar: data.description,
+          title_en:       data.title_en,
+          description_en: data.description_en,
+          url_en:         data.url_en,
+          title_ar:       data.title_ar,
+          description_ar: data.description_ar,
         });
 
         // initialize existingImages

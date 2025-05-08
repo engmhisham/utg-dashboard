@@ -210,7 +210,7 @@ export default function BlogCreatePage() {
       }
 
       toast.success('Blog created!');
-      // router.push('/blogs');
+      router.push('/blogs');
     } catch (err: any) {
       toast.error(err.message || 'An error occurred');
     } finally {

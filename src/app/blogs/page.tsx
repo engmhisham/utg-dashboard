@@ -368,12 +368,12 @@ export default function BlogsPage() {
                         </td>
                         <td className="px-6 py-4">
                           <span
-                            className={`p-2 inline-flex text-xs font-semibold rounded-full ${
+                            className={`p-2 inline-flex text-sm font-semibold rounded-full ${
                               b.category?.name === `${b.category?.name}`
-                                ? 'bg-green-100 text-green-800'
+                                ? 'text-green-800'
                                 : b.category?.name === 'Uncategorized'
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-gray-100 text-gray-800'
+                                  ? 'text-yellow-800'
+                                  : 'text-gray-800'
                             }`}
                           >
                             {b.category?.name || 'Uncategorized'}

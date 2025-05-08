@@ -74,11 +74,11 @@ export default function ClientEditPage() {
         setForm({
           status:         client.status,
           logoUrl:        client.logoUrl,
-          title_en:       client.title,
-          description_en: client.description,
-          url_en:         client.url,
-          title_ar:       client.title,
-          description_ar: client.description,
+          title_en:       client.title_en,
+          description_en: client.description_en,
+          url_en:         client.url_en,
+          title_ar:       client.title_ar,
+          description_ar: client.description_ar,
         });
         setPreviewUrl(client.logoUrl);
       } catch (err) {

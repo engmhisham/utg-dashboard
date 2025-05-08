@@ -72,10 +72,10 @@ export default function BrandEditPage() {
         setForm({
           status:         data.status,
           logoUrl:        getImgSrc(data.logoUrl),
-          title_en:       data.name,
-          description_en: data.description,
-          title_ar:       data.name,
-          description_ar: data.description,
+          title_en:       data.name_en,
+          description_en: data.description_en,
+          title_ar:       data.name_ar,
+          description_ar: data.description_ar,
         });
         // show existing logo as preview
         setPreviewUrl(data.logoUrl);
