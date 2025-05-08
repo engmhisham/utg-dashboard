@@ -200,7 +200,7 @@ export default function LocationsPage() {
           </div>
 
           {/* Table */}
-          <div className="bg-white rounded-xl shadow border overflow-hidden">
+          <div className="hidden md:block bg-white rounded-xl shadow border overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -220,7 +220,7 @@ export default function LocationsPage() {
                   </tr>
                 ) : filtered.length > 0 ? (
                   filtered.map(loc => (
-                    <tr key={loc.id} className="hover:bg-gray-50 cursor-pointer">
+                    <tr key={loc.id} onClick={() => handleEdit(loc.id)} className="hover:bg-gray-50 cursor-pointer">
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">{loc.title}</td>
                       <td className="px-6 py-4 text-sm text-gray-500">{loc.city}</td>
                       <td className="px-6 py-4">
@@ -253,6 +253,60 @@ export default function LocationsPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-4">
+            {isLoading ? (
+              <div className="py-8 text-center">
+                <LoadingSpinner className="h-8 w-8 text-gray-400 mx-auto" />
+              </div>
+            ) : filtered.length > 0 ? (
+              filtered.map(loc => (
+                <div
+                  key={loc.id}
+                  className="bg-white rounded-xl border shadow-sm cursor-pointer"
+                  onClick={() => handleEdit(loc.id)}
+                >
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium text-gray-900">{loc.title}</h3>
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${loc.status === 'published'
+                          ? 'bg-green-100 text-green-800'
+                          : loc.status === 'draft'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                        {loc.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500">{loc.city}</p>
+                    <div className="mt-2 flex justify-between text-xs text-gray-400">
+                      <span>{new Date(loc.createdAt).toLocaleDateString()}</span>
+                      <div className="flex gap-3">
+                        <button onClick={e => { e.stopPropagation(); handleEdit(loc.id); }}>
+                          <PencilLine size={16} className="text-indigo-600" />
+                        </button>
+                        <button onClick={e => { e.stopPropagation(); openDeleteModal(loc.id); }}>
+                          <Trash2 size={16} className="text-red-600" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12 bg-white rounded-xl border shadow-sm">
+                <p className="text-gray-500">No locations found.</p>
+                <button
+                  onClick={() => router.push('/locations/create')}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+                >
+                  Add New Location
+                </button>
+              </div>
+            )}
+          </div>
+
         </div>
       </main>
 
