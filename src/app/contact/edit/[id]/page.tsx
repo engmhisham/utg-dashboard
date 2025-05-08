@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import {
   ArrowLeft,
   BookUser,
+  Mails,
   Menu,
   X
 } from 'lucide-react';
@@ -74,7 +75,7 @@ export default function ViewContactMessagePage() {
                 <ArrowLeft size={20} />
               </Link>
               <h1 className="text-xl md:text-2xl font-semibold flex items-center ml-2">
-                <BookUser className="mr-2" size={22} /> View Contact Message
+                <Mails className="mr-2" size={22} /> View Contact Message
               </h1>
             </div>
           </div>

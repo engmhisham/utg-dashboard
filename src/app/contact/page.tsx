@@ -12,7 +12,8 @@ import {
   BookUser,
   Menu,
   X,
-  PencilLine
+  PencilLine,
+  Mails
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -163,7 +164,7 @@ export default function ContactPage() {
                 <ArrowLeft size={20} />
               </Link>
               <h1 className="text-xl md:text-2xl font-semibold flex items-center ml-2">
-                <BookUser size={22} className="mr-2" /> Contact Messages
+                <Mails size={22} className="mr-2" /> Contact Messages
               </h1>
             </div>
           </div>

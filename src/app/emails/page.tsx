@@ -21,7 +21,8 @@ import {
   Menu,
   Inbox,
   Mails,
-  X
+  X,
+  MailCheck
 } from 'lucide-react';
 import Link from 'next/link';
  
@@ -223,8 +224,8 @@ export default function EmailsPage() {
                     <ChevronLeft size={20} />
                   </Link>
                   <h1 className="text-xl font-medium flex items-center">
-                  <Mails size={22} className="mr-2" />
-                    Emails</h1>
+                  <MailCheck size={22} className="mr-2" />
+                    Subscriptions</h1>
                 </div>
                 <div className="flex items-center gap-2">
                   <button 
@@ -247,12 +248,12 @@ export default function EmailsPage() {
             ) : (
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center">
-                  <Link href="/" className="text-gray-500 hover:text-gray-700 mr-2">
+                  <Link href="/" className="text-gray-500 hover:text-gray-700 mr-4">
                     <ArrowLeft size={20} />
                   </Link>
                   <h1 className="text-2xl font-semibold flex items-center">
-                    <Mails size={22} className="mr-2" />
-                    Emails
+                    <MailCheck size={22} className="mr-2" />
+                    Subscriptions
                   </h1>
                 </div>
               </div>
