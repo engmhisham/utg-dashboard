@@ -1,266 +1,244 @@
 'use client';
-import { useState, useEffect } from 'react';
-import Sidebar from '../../components/Sidebar';
-import { usePathname, useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  Search, 
-  Plus, 
-  Star, 
-  ChevronLeft,
-  Clock, 
-  Trash2, 
-  MoreVertical,
-  RefreshCw,
-  Archive,
-  Filter,
-  ChevronDown,
-  Mail,
-  MailOpen,
-  Tag,
-  Menu,
-  Inbox,
-  Mails,
-  X,
-  MailCheck
-} from 'lucide-react';
+
+import { useEffect, useState } from 'react';
+import Sidebar from '@/src/components/Sidebar';
+import LoadingSpinner from '@/src/components/LoadingSpinner';
+import ConfirmModal from '@/src/components/ConfirmModal';
+import PermissionModal from '@/src/components/PermissionModal';
+import { useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
 import Link from 'next/link';
- 
+import { ArrowLeft, Trash2, FileDown, Mail, Menu, X, MailCheck } from 'lucide-react';
 
-// Sample data for the emails
-const sampleEmails = [
-  { 
-    id: 1, 
-    sender: 'John Doe', 
-    email: 'john.doe@example.com',
-    subject: 'Marketing campaign proposal', 
-    preview: 'Hi team, I wanted to share the latest marketing campaign proposal for Q2. We need to...',
-    date: '2025-04-08T10:30:00',
-    read: true,
-    starred: true,
-    tags: ['client', 'important']
-  },
-  { 
-    id: 2, 
-    sender: 'Sarah Williams', 
-    email: 'sarah.w@arcadecorp.com',
-    subject: 'Social media strategy feedback', 
-    preview: 'Hello, I\'ve reviewed your social media strategy document and I have some feedback to share...',
-    date: '2025-04-08T09:15:00',
-    read: false,
-    starred: false,
-    tags: ['social', 'feedback']
-  },
-  { 
-    id: 3, 
-    sender: 'Team Analytics', 
-    email: 'analytics@utg.io',
-    subject: 'Weekly Analytics Report - April 1-7', 
-    preview: 'Here\'s your weekly analytics report. Website traffic up 12%, conversion rate stable at 3.5%...',
-    date: '2025-04-07T16:45:00',
-    read: true,
-    starred: false,
-    tags: ['report', 'analytics'] 
-  },
-  { 
-    id: 4, 
-    sender: 'Michael Chen', 
-    email: 'michael.c@brightstar.com',
-    subject: 'Meeting follow-up - Campaign Strategy', 
-    preview: 'Thanks for the meeting today. As discussed, I\'m attaching the revised campaign strategy with...',
-    date: '2025-04-07T14:20:00',
-    read: false,
-    starred: true,
-    tags: ['meeting', 'campaign']
-  },
-  { 
-    id: 5, 
-    sender: 'Emma Johnson', 
-    email: 'emma.johnson@clientcorp.com',
-    subject: 'Question about latest report', 
-    preview: 'Hi there, I was looking at the latest performance report you sent over and had a question about...',
-    date: '2025-04-06T11:05:00',
-    read: true,
-    starred: false,
-    tags: ['client', 'report']
-  },
-  { 
-    id: 6, 
-    sender: 'Product Updates', 
-    email: 'updates@utg.io',
-    subject: 'New features available in your UTG dashboard', 
-    preview: 'We\'ve added some exciting new features to your UTG dashboard! Check out the new analytics...',
-    date: '2025-04-05T08:30:00',
-    read: true,
-    starred: false,
-    tags: ['product', 'updates']
-  },
-  { 
-    id: 7, 
-    sender: 'Alex Thompson', 
-    email: 'alex.t@techinnovate.io',
-    subject: 'Partnership opportunity', 
-    preview: 'I\'d like to discuss a potential partnership between our companies. Our innovative tech solutions...',
-    date: '2025-04-04T15:50:00',
-    read: false,
-    starred: true,
-    tags: ['partnership', 'important']
-  }
-];
-
-// Helper to format dates
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  const today = new Date();
-  if (date.toDateString() === today.toDateString()) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  if (date.getFullYear() === today.getFullYear()) {
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  }
-  return date.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+type Subscription = {
+  id: string;
+  email: string;
+  subscribed_at: string;
 };
 
-export default function EmailsPage() {
-    
+export default function SubscriptionsPage() {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL!;
   const router = useRouter();
-  const pathname = usePathname();
-  
-  // State for search, filtering, and selection
-  const [emails, setEmails] = useState(sampleEmails);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [selectedEmails, setSelectedEmails] = useState<number[]>([]);
-  
-  // For mobile view, sidebar toggle, and filter toggle
-  const [isMobile, setIsMobile] = useState(false);
+
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showMobileFilter, setShowMobileFilter] = useState(false);
-  
+  const [isMobile, setIsMobile] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showUnauthorizedModal, setShowUnauthorizedModal] = useState(false);
+
   useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    return () => window.removeEventListener('resize', checkIfMobile);
+    const resize = () => setIsMobile(window.innerWidth < 768);
+    resize();
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
   }, []);
-     
-  // Filter emails based on search and filter selection
-  const filteredEmails = emails.filter(email => {
-    const matchesSearch = 
-      email.sender.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      email.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      email.preview.toLowerCase().includes(searchQuery.toLowerCase());
-    let matchesFilter = true;
-    if (selectedFilter === 'unread') {
-      matchesFilter = !email.read;
-    } else if (selectedFilter === 'starred') {
-      matchesFilter = email.starred;
-    }
-    return matchesSearch && matchesFilter;
-  });
-  
-  // Toggle email selection
-  const toggleEmailSelection = (id: number) => {
-    if (selectedEmails.includes(id)) {
-      setSelectedEmails(selectedEmails.filter(emailId => emailId !== id));
-    } else {
-      setSelectedEmails([...selectedEmails, id]);
+
+  const fetchUserRole = async () => {
+    try {
+      const token = Cookies.get('accessToken');
+      const res = await fetch(`${API_URL}/auth/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setUserRole(data.data.role);
+    } catch {
+      setUserRole(null);
     }
   };
-  
-  // Toggle star status
-  const toggleStarred = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEmails(emails.map(email => 
-      email.id === id ? { ...email, starred: !email.starred } : email
-    ));
-  };
-  
-  // Mark as read/unread
-  const toggleReadStatus = (ids: number[]) => {
-    setEmails(emails.map(email => 
-      ids.includes(email.id) ? { ...email, read: !email.read } : email
-    ));
-    setSelectedEmails([]);
-  };
-  
-  // Delete selected emails
-  const deleteEmails = (ids: number[]) => {
-    setEmails(emails.filter(email => !ids.includes(email.id)));
-    setSelectedEmails([]);
-  };
-  
-  // Select all emails
-  const selectAllEmails = () => {
-    if (selectedEmails.length === filteredEmails.length) {
-      setSelectedEmails([]);
-    } else {
-      setSelectedEmails(filteredEmails.map(email => email.id));
+
+  const fetchSubscriptions = async () => {
+    setLoading(true);
+    try {
+      const token = Cookies.get('accessToken');
+      const res = await fetch(`${API_URL}/subscriptions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setSubscriptions(Array.isArray(data.data) ? data.data : []);
+    } catch (err) {
+      console.error(err);
+      setSubscriptions([]);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchUserRole();
+    fetchSubscriptions();
+  }, []);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      const token = Cookies.get('accessToken');
+      await fetch(`${API_URL}/subscriptions/${deleteId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSubscriptions(prev => prev.filter(s => s.id !== deleteId));
+    } catch {
+      alert('Failed to delete');
+    } finally {
+      setDeleteId(null);
+      setShowDeleteModal(false);
+    }
+  };
+
+  const handleExport = async () => {
+    const token = Cookies.get('accessToken');
+    const res = await fetch(`${API_URL}/subscriptions/export`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'subscriptions.xlsx';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Pass sidebar control props */}
       <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-      
-      <main className="flex-1 flex flex-col overflow-y-auto">
-        {/* Sticky Header (Full width, no container padding) */}
+
+      <main className="flex-1 overflow-y-auto">
         <div className="sticky top-0 z-10 bg-white border-b mb-5 border-gray-200">
-          <div className="p-4 md:p-7">
-            {isMobile ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className="p-1 rounded-full bg-white shadow-md border border-gray-200"
-                    aria-label="Toggle sidebar"
-                  >
-                    {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-                  </button>
-                  <Link href="/" className="p-1 mr-2">
-                    <ChevronLeft size={20} />
-                  </Link>
-                  <h1 className="text-xl font-medium flex items-center">
-                  <MailCheck size={22} className="mr-2" />
-                    Subscriptions</h1>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => setShowMobileFilter(!showMobileFilter)} 
-                    className={`p-1 rounded-full ${showMobileFilter ? 'bg-blue-100 text-blue-600' : ''}`}
-                  >
-                    <Filter size={18} />
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setSearchQuery('');
-                      setShowMobileFilter(true);
-                    }} 
-                    className="p-1"
-                  >
-                    <Search size={18} />
-                  </button>
-                </div>
+          <div className="p-4 md:p-6 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isMobile && (
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-1 bg-white rounded-full shadow border"
+                >
+                  {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+              )}
+              <Link href="/" className="text-gray-500 hover:text-gray-700">
+                <ArrowLeft size={20} />
+              </Link>
+              <h1 className="text-xl md:text-2xl font-semibold flex items-center ml-2">
+                <MailCheck size={22} className="mr-2" /> Subscriptions
+              </h1>
+            </div>
+            <button
+              onClick={handleExport}
+              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
+            >
+              <FileDown size={16} className="mr-2" />
+              <span className="hidden md:inline">Export</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-5xl px-4 pb-10">
+
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-white shadow-sm rounded-xl border">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-600 uppercase">Email</th>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-600 uppercase">Subscribed At</th>
+                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-600 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                    <td colSpan={3}>
+                      <div className="py-8 flex justify-center items-center">
+                        <LoadingSpinner className="h-6 w-6 text-gray-400" />
+                      </div>
+                    </td>
+                  </tr>
+                  ) : subscriptions.length > 0 ? (
+                    subscriptions.map(sub => (
+                      <tr key={sub.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 text-sm text-gray-900">{sub.email}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{new Date(Date.parse(sub.subscribed_at)).toLocaleString()}</td>
+                        <td className="px-6 py-4 text-right">
+                          {userRole === 'admin' && (
+                            <button
+                              onClick={() => {
+                                setDeleteId(sub.id);
+                                setShowDeleteModal(true);
+                              }}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="py-6 text-center text-gray-500">
+                        No subscriptions found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-4 mt-4">
+            {loading ? (
+              <div className="py-8 text-center">
+                <LoadingSpinner className="h-8 w-8 text-gray-400 mx-auto" />
               </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center">
-                  <Link href="/" className="text-gray-500 hover:text-gray-700 mr-4">
-                    <ArrowLeft size={20} />
-                  </Link>
-                  <h1 className="text-2xl font-semibold flex items-center">
-                    <MailCheck size={22} className="mr-2" />
-                    Subscriptions
-                  </h1>
+            ) : subscriptions.length > 0 ? (
+              subscriptions.map(sub => (
+                <div key={sub.id} className="bg-white border shadow-sm rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{sub.email}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(sub.subscribed_at).toLocaleString()}
+                      </p>
+                    </div>
+                    {userRole === 'admin' && (
+                      <button
+                        onClick={() => {
+                          setDeleteId(sub.id);
+                          setShowDeleteModal(true);
+                        }}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="text-center py-12 bg-white rounded-xl border shadow-sm">
+                <p className="text-gray-500">No subscriptions found.</p>
               </div>
             )}
           </div>
         </div>
       </main>
+
+      <ConfirmModal
+        show={showDeleteModal}
+        message="Delete this subscription?"
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteModal(false)}
+      />
+      <PermissionModal
+        show={showUnauthorizedModal}
+        message="You don’t have permission to perform this action."
+        onClose={() => setShowUnauthorizedModal(false)}
+      />
     </div>
   );
 }
