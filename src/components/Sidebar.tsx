@@ -24,6 +24,7 @@ import {
   Users,
   LogOut as LogoutIcon,
   Tags,
+  MapPin,
 } from 'lucide-react';
 import NavItem from './nav/NavItem';
 import SubNavItem from './nav/SubNavItem';
@@ -124,6 +125,7 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
         { text: 'Categories', href: '/categories/blogs', icon: <Tags size={16}/> },
       ]
     },
+    { text: 'Locations',      href: '/locations',     icon: <MapPin size={16}/> },
     { text: 'Clients',      href: '/clients',     icon: <UsersRound size={16}/> },
     { text: 'Projects',     href: '/projects',    icon: <Boxes size={16}/> },
     { text: 'Team',         href: '/team',        icon: <UsersRound size={16}/> },
