@@ -25,6 +25,7 @@ import {
   LogOut as LogoutIcon,
   Tags,
   MapPin,
+  MailCheck,
 } from 'lucide-react';
 import NavItem from './nav/NavItem';
 import SubNavItem from './nav/SubNavItem';
@@ -116,8 +117,8 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
         { text: 'Pages',   href: '/seo/pages',   icon: <FileText    size={16}/> },
       ]
     },
-    { text: 'Emails',       href: '/emails',      icon: <Mails size={16}/> },
-    { text: 'Contact',      href: '/contact',     icon: <BookUser size={16}/> },
+    { text: 'Subscriptions',       href: '/emails',      icon: <MailCheck size={16}/>},
+    { text: 'Contact',      href: '/contact',     icon: <Mails size={16}/> },
     {
       text: 'Blogs', icon: <Rss size={16}/>,
       submenu: [
@@ -125,7 +126,7 @@ const Sidebar: FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
         { text: 'Categories', href: '/categories/blogs', icon: <Tags size={16}/> },
       ]
     },
-    { text: 'Locations',      href: '/locations',     icon: <MapPin size={16}/> },
+    { text: 'Locations',      href: '/locations',     icon: <MapPin size={16}/>, badge: 'New' },
     { text: 'Clients',      href: '/clients',     icon: <UsersRound size={16}/> },
     { text: 'Projects',     href: '/projects',    icon: <Boxes size={16}/> },
     { text: 'Team',         href: '/team',        icon: <UsersRound size={16}/> },
