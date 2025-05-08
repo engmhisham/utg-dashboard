@@ -90,7 +90,7 @@ export default function SubscriptionsPage() {
 
   const handleExport = async () => {
     const token = Cookies.get('accessToken');
-    const res = await fetch(`${API_URL}/subscriptions/export`, {
+    const res = await fetch(`${API_URL}/subscriptions/export/excel`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const blob = await res.blob();
@@ -98,6 +98,7 @@ export default function SubscriptionsPage() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'subscriptions.xlsx';
+    document.body.appendChild(a);
     a.click();
     URL.revokeObjectURL(url);
   };
